@@ -1,0 +1,27 @@
+# Le comptage : lancé à la main, il compte les offres des métiers candidats (scripts/compter.py)
+# et affiche le tableau dans le résumé du run. Il n'écrit rien dans data/ et ne commite rien.
+name: comptage
+
+on:
+  workflow_dispatch:          # bouton « Run workflow »
+
+permissions:
+  contents: read
+
+jobs:
+  compter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Compter les offres des métiers candidats
+        env:
+          FT_CLIENT_ID: ${{ secrets.FT_CLIENT_ID }}
+          FT_CLIENT_SECRET: ${{ secrets.FT_CLIENT_SECRET }}
+        run: python scripts/compter.py
