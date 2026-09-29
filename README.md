@@ -26,6 +26,14 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 3. Quelles langues, quels outils (CRM, ERP, merchandising, KPI) reviennent le plus ?
 4. Quelles enseignes et quels secteurs recrutent : distribution, luxe, industrie, services ?
 
+## Offres d'Adzuna
+
+`data/externes/adzuna.csv` contient les offres Adzuna relevées dans le navigateur (recherche par métier, filtre « 30 derniers jours »
+et salaire minimum, une page ou deux par recherche) : identifiant, métier ROME rattaché, intitulé, employeur, lieu (code INSEE), salaire tel qu'affiché.
+`resumer.py` les fusionne avec celles de France Travail et applique les mêmes règles. Adzuna n'affiche ni la date exacte ni le contrat sur la liste :
+la date est posée au milieu de la fenêtre (`date_approx`) et un contrat non lu est supposé CDI (`contrat_suppose`).
+Pour en ajouter, complétez le CSV puis relancez `scripts/resumer.py`.
+
 ## Ce qui est gardé dans les chiffres
 
 `scripts/resumer.py` (fonction `nettoyer`) ne garde que les annonces :

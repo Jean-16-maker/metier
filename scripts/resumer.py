@@ -373,6 +373,68 @@ def nettoyer(offres, jour):
     return list(uniques.values()), dict(retires)
 
 
+# ---------------------------------------------------------------------------
+# Offres d'Adzuna, relevées à la main dans le navigateur (data/externes/adzuna.csv).
+# ---------------------------------------------------------------------------
+MOTIF_SALAIRE_ADZUNA = re.compile(
+    r"(?:(a partir de)\s*)?(\d[\d.,\s]*)\s*(k)?\s*€?\s*(?:-|à)?\s*(?:(\d[\d.,\s]*)\s*(k)?\s*€)?", re.IGNORECASE)
+
+
+def salaire_adzuna(lib):
+    """'40 - 50 K€ BRUT ANNUEL' -> (40000, 50000) ; '2400.00€ - 2500.00€ MOIS' -> x12 ; 'A PARTIR DE 32 K€' -> (32000, None)."""
+    t = (lib or "").lower().replace("\u202f", " ").replace("\xa0", " ")
+    mois = "mois" in t
+    nombres = re.findall(r"(\d[\d\s]*(?:[.,]\d+)?)\s*(k)?\s*€?", re.split(r"\bbrut\b|\bpar\b|\bmois\b", t)[0])
+    vals = []
+    for n, k in nombres:
+        try:
+            v = float(n.replace(" ", "").replace(",", "."))
+        except ValueError:
+            continue
+        v = v * 1000 if (k or v < 1000) else v
+        vals.append(v * 12 if mois else v)
+    vals = [round(v) for v in vals if SALAIRE_MIN <= v <= SALAIRE_MAX]
+    if not vals:
+        return None, None
+    return (vals[0], None) if "a partir" in t or "à partir" in t or len(vals) == 1 else (min(vals), max(vals))
+
+
+def lire_adzuna(geo, jour):
+    """Les offres Adzuna au même format que celles de France Travail.
+
+    Adzuna ne donne ni date précise (seulement « publiée il y a moins de 30 jours ») ni contrat sur la page
+    de résultats : la date est posée au milieu de la fenêtre (jour - 15) et un contrat non lu est supposé CDI ;
+    les deux sont signalés par `date_approx` et `contrat_suppose`."""
+    fichier = RACINE / "data" / "externes" / "adzuna.csv"
+    if not fichier.exists():
+        return []
+    offres = []
+    approx = (date.fromisoformat(jour) - timedelta(days=15)).isoformat()
+    with fichier.open(encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            smin, smax = salaire_adzuna(r["salaire"])
+            m = re.search(r"\b(\d{2}[0-9AB]\d{2})\b", r["lieu"] or "")
+            insee = m.group(1) if m else None
+            pos = geo.commune(insee) if insee else None
+            dep = insee[:2] if insee else ""
+            contrat = (r["contrat"] or "").upper()
+            famille = {"CDD": "cdd", "INTÉRIM": "mis", "INTERIM": "mis", "ALTERNANCE": "alt"}.get(contrat, "cdi")
+            offres.append({
+                "id": "adz-" + r["id"], "rome": r["rome"], "intitule": r["intitule"], "entreprise": r["entreprise"] or None,
+                "lieu": r["lieu"], "dep": dep,
+                "lat": pos[0] if pos else None, "lon": pos[1] if pos else None, "prec": "commune" if pos else None,
+                "contrat": contrat or None, "famille": famille, "source": "Adzuna",
+                "date_approx": True, "contrat_suppose": not contrat,
+                "experience": None, "alternance": famille == "alt", "salaire": r["salaire"], "smin": smin, "smax": smax,
+                "date": approx, "vu_le": r["recupere_le"], "url": "https://www.adzuna.fr/details/" + r["id"],
+                "outils": [nom for nom, rx in REGEX_OUTILS.items() if rx.search((r["intitule"] or "").lower())],
+                "teletravail": False, "competences": [], "niveau": niveau(r["intitule"]), "nature": "salarie",
+                "exp_exige": None, "exp_ans": None, "qualification": None, "formation": None, "secteur": None,
+                "temps": None, "postes": 1,
+            })
+    return offres
+
+
 def main():
     jours = sorted((RACINE / "data" / "actives").glob("*.csv"))
     if not jours:
@@ -438,6 +500,7 @@ def main():
             "temps": temps_travail(o),
             "postes": int(o.get("nombrePostes") or 1),
         })
+    offres += lire_adzuna(geo, jour)
     geo.sauver()
     offres, retires = nettoyer(offres, jour)
 
@@ -450,7 +513,7 @@ def main():
 
     resume = {
         "date": jour,
-        "source": "France Travail — API Offres d'emploi v2",
+        "source": "France Travail — API Offres d'emploi v2, complété par Adzuna",
         "requete": "une requête codeROME par métier, France entière",
         "metiers": [{"code": c, "libelle": l, "groupe": g, "coche": k,
                      "actives": sum(1 for o in offres if o["rome"] == c)}
