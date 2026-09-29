@@ -34,19 +34,35 @@ from extraire import METIERS  # noqa: E402  (la liste des métiers vit dans un s
 # Les outils et compétences que l'on cherche dans les annonces : c'est VOTRE grille, adaptez-la.
 # Chaque entrée : libellé affiché -> variantes cherchées (mot entier, insensible à la casse).
 OUTILS = {
-    "Incoterms": ["incoterm", "incoterms"],
-    "Douane / dédouanement": ["douane", "douanes", "douanier", "douanière", "dédouanement",
-                              "déclaration en douane", "oea", "nomenclature douanière"],
-    "Crédit documentaire": ["crédit documentaire", "credoc", "lettre de crédit", "remise documentaire"],
-    "Transport international": ["transitaire", "fret", "maritime", "aérien", "conteneur", "affrètement"],
-    "Prospection / salons": ["prospection", "salon", "salons", "foire", "foires"],
-    "Réponse à appels d'offres": ["appel d'offres", "appels d'offres", "tender", "tenders"],
+    # Retail et expérience client
+    "Gestion d'équipe / management": ["management d'équipe", "manager une équipe", "encadrement d'équipe",
+                                      "encadrer une équipe", "animation d'équipe", "animer une équipe"],
+    "Merchandising / VM": ["merchandising", "visual merchandising", "mise en rayon", "implantation", "vitrine"],
+    "Gestion de stock / inventaire": ["gestion des stocks", "gestion de stock", "stocks", "inventaire", "inventaires"],
+    "Suivi de KPI / tableaux de bord": ["kpi", "indicateurs", "tableau de bord", "tableaux de bord", "reporting"],
+    "Chiffre d'affaires / objectifs": ["chiffre d'affaires", "objectifs de vente", "marge", "rentabilité", "panier moyen"],
+    "Expérience / satisfaction client": ["expérience client", "satisfaction client", "nps", "fidélisation",
+                                         "parcours client", "voix du client"],
+    "Omnicanal / e-commerce": ["omnicanal", "omnicanalité", "cross-canal", "e-commerce", "click and collect", "drive"],
+    "Recrutement / formation": ["recrutement", "recruter", "formation des équipes", "former les équipes", "onboarding"],
+    "Multi-sites / réseau": ["multi-sites", "multisites", "réseau de magasins", "réseau de points de vente",
+                             "franchise", "franchisés", "franchisé"],
+    "Service client / SAV": ["service client", "relation client", "sav", "réclamations"],
+    # Direction commerciale et international business
+    "Stratégie commerciale": ["stratégie commerciale", "plan d'action commercial", "business plan", "budget"],
+    "Grands comptes / KAM": ["grands comptes", "grand compte", "key account", "kam", "comptes clés"],
+    "Développement de portefeuille": ["développement du portefeuille", "prospection", "conquête", "business development"],
     "Négociation": ["négociation", "négocier", "negotiation"],
-    "ERP / SAP": ["erp", "sap", "oracle", "sage", "cegid", "dynamics"],
-    "CRM / Salesforce": ["crm", "salesforce", "hubspot"],
+    "Réponse à appels d'offres": ["appel d'offres", "appels d'offres", "tender", "tenders"],
+    "Import / export": ["export", "import", "incoterm", "incoterms", "douane", "douanes", "international"],
+    "Salons / événements": ["salon", "salons", "foire", "foires", "événement", "événements"],
+    # Outils
+    "CRM / Salesforce": ["crm", "salesforce", "hubspot", "dynamics"],
+    "ERP / SAP": ["erp", "sap", "oracle", "sage", "cegid"],
     "Excel": ["excel"],
     "Power BI / Qlik": ["power bi", "powerbi", "qlik", "tableau software"],
     "LinkedIn": ["linkedin"],
+    # Langues
     "Anglais": ["anglais", "english", "toeic", "toefl", "bilingue"],
     "Allemand": ["allemand", "german", "deutsch"],
     "Espagnol": ["espagnol", "spanish", "español"],
@@ -54,8 +70,8 @@ OUTILS = {
     "Portugais": ["portugais", "portuguese"],
     "Chinois": ["chinois", "mandarin", "chinese"],
     "Arabe": ["arabe", "arabic"],
-    "Déplacements à l'étranger": ["déplacements à l'étranger", "déplacements internationaux",
-                                  "voyages à l'étranger", "mobilité internationale"],
+    "Déplacements": ["déplacements", "déplacements à l'étranger", "déplacements internationaux",
+                     "voyages à l'étranger", "mobilité internationale", "mobilité géographique"],
 }
 REGEX_OUTILS = {nom: re.compile(r"(?<![\w-])(" + "|".join(re.escape(v) for v in variantes) + r")(?![\w-])")
                 for nom, variantes in OUTILS.items()}
@@ -66,7 +82,7 @@ GEO = "https://geo.api.gouv.fr"
 # un « chargé »). Première expression qui correspond, en minuscules.
 NIVEAUX = [
     ("directeur", r"directeur|directrice|\bhead of\b|\bcso\b|\bcpo\b|\bvp\b|export director|sales director"),
-    ("responsable", r"responsable|manager|\bchef|\bcheffe|\blead\b|\bhead\b|key account|\bkam\b"),
+    ("responsable", r"responsable|gérant|gérante|store manager|area manager|manager|\bchef|\bcheffe|\blead\b|\bhead\b|key account|\bkam\b"),
     ("assistant", r"assistant|alternan|apprenti|stagiaire|\bstage\b|junior"),
     ("charge", r"charg[ée]|consultant|analyste|analyst|spécialiste|specialist|traffic|community"
                 r"|expert|technicien|conseiller|animateur|référenceur|rédacteur|designer"

@@ -3,7 +3,7 @@ r"""Récupère les offres France Travail des métiers suivis et les enregistre d
 Usage :
     .venv\Scripts\python.exe scripts\extraire.py                 # tous les métiers de METIERS
     .venv\Scripts\python.exe scripts\extraire.py --verifier      # teste seulement la connexion
-    .venv\Scripts\python.exe scripts\extraire.py --rome D1433    # un seul code, pour essayer
+    .venv\Scripts\python.exe scripts\extraire.py --rome D1301    # un seul code, pour essayer
 
 Ce que ça écrit :
     data/brut/<AAAA-MM>/<ROME>.jsonl   une ligne par offre complète (JSON tel que l'API le renvoie),
@@ -34,36 +34,18 @@ RACINE = Path(__file__).resolve().parent.parent
 load_dotenv(RACINE / ".env")
 
 # Les métiers suivis : code ROME -> (libellé, groupe, coché par défaut sur la page).
-# Choisis pour les métiers du commerce international (ROME 4.0, arborescence de juin 2026) ;
-# la page permet de cocher/décocher.
+# Choisis pour le master marketing-vente spécialité DCIB (direction commerciale et international
+# business) et le parcours management retail et expérience client ; la page permet de cocher/décocher.
 METIERS = {
-    # Cœur international : export, import, zones
-    "D1433": ("Commercial(e) export", "International", True),
-    "D1414": ("Responsable de zone internationale", "International", True),
-    "D1429": ("Assistant(e) import-export", "International", True),
-    "D1409": ("Assistant(e) administration des ventes (ADV)", "International", True),
-    "N1204": ("Coordinateur(trice) transit import-export", "International", True),
-    # Développement commercial, souvent à l'international
-    "M1707": ("Responsable du développement commercial", "Développement", True),
-    "M1715": ("Directeur(trice) commercial(e)", "Développement", True),
-    "D1406": ("Directeur(trice) des ventes", "Développement", True),
-    "D1444": ("Responsable grands comptes", "Développement", True),
-    "D1420": ("Ingénieur(e) d'affaires / cadre technico-commercial", "Développement", True),
-    # Achats, transit et douane
-    "M1101": ("Acheteur(se)", "Achats & douane", True),
-    "M1102": ("Directeur(trice) des achats", "Achats & douane", True),
-    "D1431": ("Assistant(e) achat", "Achats & douane", True),
-    "N1202": ("Agent(e) de transit", "Achats & douane", True),
-    "N1203": ("Déclarant(e) en douane", "Achats & douane", True),
-    "N1205": ("Responsable de service transit", "Achats & douane", True),
-    "N4106": ("Responsable de douane", "Achats & douane", True),
-    "N1201": ("Affréteur(se)", "Achats & douane", True),
-    # Commerce généraliste, à la frontière : gros volumes, peu d'international
-    "D1402": ("Commercial(e) grands comptes et entreprises", "Frontière", False),
-    "D1407": ("Technico-commercial(e)", "Frontière", False),
-    "D1401": ("Assistant(e) commercial(e)", "Frontière", False),
-    "M1703": ("Chef(fe) de produit", "Frontière", False),
-    "N1301": ("Responsable logistique", "Frontière", False),
+    # Management retail et expérience client
+    "D1301": ("Management de magasin de détail", "Retail & expérience client", True),
+    "D1302": ("Direction de boutique ou de point de vente", "Retail & expérience client", True),
+    "D1509": ("Management du réseau commercial de détail", "Retail & expérience client", True),
+    "M1704": ("Management relation clientèle", "Retail & expérience client", True),
+    # Direction commerciale et international business
+    "M1707": ("Stratégie commerciale", "Direction commerciale & international", True),
+    "D1402": ("Relation commerciale grands comptes et entreprises", "Direction commerciale & international", True),
+    "H1102": ("Management et ingénierie d'affaires", "Direction commerciale & international", True),
 }
 
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"

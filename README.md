@@ -1,9 +1,10 @@
-# Le marché de mon métier — les métiers du commerce international
+# Le marché de mon métier — retail, expérience client et direction commerciale internationale
 
-Une veille quotidienne des offres d'emploi du commerce international : export,
-import, développement commercial, achats, transit et douane. Chaque matin, une
-Action GitHub interroge l'API France Travail, enregistre les offres du jour et
-publie les chiffres sur GitHub Pages.
+Une veille quotidienne des offres d'emploi visées par le master marketing-vente,
+spécialité DCIB (direction commerciale et international business), et le
+parcours management retail et expérience client. Chaque matin, une Action GitHub
+interroge l'API France Travail, enregistre les offres du jour et publie les
+chiffres sur GitHub Pages.
 
 Adapté du dépôt de démonstration
 [VincentFavarin/metier](https://github.com/VincentFavarin/metier) (métiers du
@@ -18,49 +19,33 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 | `recruteurs.html` | entreprises, secteurs, employeurs ouverts aux débutants |
 | `mouvement.html` | les extractions successives, la fraîcheur des annonces |
 
-## Le métier, tel que le marché le nomme
-
-- **Intitulé principal** : commercial / commerciale export
-- **Variantes rencontrées dans les offres** : export area manager, responsable
-  de zone, business developer international, assistant(e) import-export,
-  ADV export, acheteur international, déclarant(e) en douane
-- **Code ROME de référence** : **D1433** — Commercial / Commerciale export
-  (ROME 4.0, arborescence du 15/06/2026)
-
 ## Les questions que je pose à ce marché
 
-1. Combien d'offres, et où : ma région, l'Île-de-France, les ports et
-   plateformes logistiques (Le Havre, Marseille, Lyon, Lille), l'étranger ?
-2. Quels contrats et quels salaires affichés ?
-3. Quelles langues, au-delà de l'anglais ? Quels savoirs techniques
-   (Incoterms, douane, crédit documentaire, ERP) reviennent le plus ?
-4. Quelles entreprises et quels secteurs recrutent : industriels exportateurs,
-   négoce, commissionnaires de transport ?
+1. Combien d'offres, et où : ma région, l'Île-de-France, les grandes métropoles ?
+2. Quels contrats et quels salaires affichés, du responsable de magasin au directeur commercial ?
+3. Quelles langues, quels outils (CRM, ERP, merchandising, KPI) reviennent le plus ?
+4. Quelles enseignes et quels secteurs recrutent : distribution, luxe, industrie, services ?
 
 ## Les métiers suivis
 
-23 codes ROME choisis parmi les 1 911 fiches du référentiel France Travail (la
-liste vit dans `scripts/extraire.py`, `METIERS`), en quatre groupes :
+7 codes ROME (la liste vit dans `scripts/extraire.py`, `METIERS`), en deux groupes :
 
-- **International** — D1433 commercial export, D1414 responsable de zone
-  internationale, D1429 assistant import-export, D1409 ADV (dont ADV export),
-  N1204 coordinateur transit import-export.
-- **Développement** — M1707 responsable du développement commercial (dont
-  responsable commercial international), M1715 directeur commercial (dont
-  export), D1406 directeur des ventes (dont ventes internationales), D1444
-  responsable grands comptes, D1420 ingénieur d'affaires.
-- **Achats & douane** — M1101 acheteur (dont acheteur international, sourcing),
-  M1102 directeur des achats, D1431 assistant achat, N1202 agent de transit,
-  N1203 déclarant en douane, N1205 responsable de service transit, N4106
-  responsable de douane, N1201 affréteur.
-- **Frontière**, décochés par défaut — D1402 commercial grands comptes, D1407
-  technico-commercial, D1401 assistant commercial, M1703 chef de produit, N1301
-  responsable logistique. Gros volumes, peu d'international : l'API plafonne à
-  1 150 offres par requête, le détail de ces métiers est donc partiel.
+- **Retail & expérience client** — D1301 management de magasin de détail, D1302
+  direction de boutique ou de point de vente, D1509 management du réseau
+  commercial de détail (directeur de réseau, area manager, chef de secteur),
+  M1704 management relation clientèle (expérience client, CRM, service client).
+- **Direction commerciale & international** — M1707 stratégie commerciale
+  (directeur commercial, export ou international, business developer), D1402
+  relation commerciale grands comptes et entreprises (ingénieur d'affaires
+  international, key account manager), H1102 management et ingénierie d'affaires.
 
-La grille des outils et compétences cherchés dans les annonces (Incoterms,
-douane, crédit documentaire, ERP/SAP, CRM, langues, déplacements…) est dans
-`scripts/resumer.py`, `OUTILS` : adaptez-la.
+Les libellés officiels des codes sont à vérifier avec `scripts/extraire.py --verifier`
+puis `--rome <code>` : un code qui ne renvoie aucune offre est probablement mal recopié.
+
+La grille des outils et compétences cherchés dans les annonces est dans
+`scripts/resumer.py`, `OUTILS` : management d'équipe, merchandising, KPI,
+expérience client (NPS), omnicanal, grands comptes, appels d'offres, import-export,
+CRM/ERP et langues.
 
 ## La chaîne
 
@@ -69,7 +54,7 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
                                             →  data/actives/<date>.csv         les offres actives du jour (rome, id)
                                             →  data/serie.csv                  par jour et par métier : total, nouvelles, modifiées
                        scripts/resumer.py   →  data/resume.json                ce que les pages affichent (+ data/geo/, cache des positions)
-                       index.html + 4 pages →  https://vincentfavarin.github.io/metier/
+                       index.html + 4 pages →  https://jean-16-maker.github.io/metier/
                        .github/workflows/veille.yml : GitHub relance tout ça chaque matin à 7 h
 ```
 
@@ -146,4 +131,9 @@ cp .env.example .env          (puis remplir avec ses identifiants francetravail.
 - Les identifiants sont dans `.env` (local) ou dans les secrets du dépôt
   (GitHub) : jamais dans un fichier versionné.
 - Un canal, une requête, une date : chaque chiffre du site les affiche.
-- Pas de scraping de LinkedIn, APEC ou Indeed (interdit par leurs CGU).
+- Le scraping de LinkedIn, APEC, Indeed ou Welcome to the Jungle est autorisé
+  dans ce dépôt tant qu'il reste **partiel** : consultation ponctuelle de
+  quelques pages de résultats, sans moisson exhaustive ni automatisation
+  quotidienne. Ces sites l'interdisent dans leurs CGU : c'est un choix assumé
+  par l'auteur du dépôt, à ses risques. Les chiffres issus de ces sources
+  restent partiels et ne se mélangent pas à ceux de France Travail.
