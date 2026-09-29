@@ -299,7 +299,8 @@ def main():
         raise SystemExit("Aucune extraction : lancez d'abord scripts/extraire.py")
     jour = jours[-1].stem
     with jours[-1].open(encoding="utf-8") as f:
-        actives = [(r["rome"], r["id"]) for r in csv.DictReader(f)]
+        # Seuls les métiers suivis comptent : un ancien code encore dans le fichier du jour est ignoré.
+        actives = [(r["rome"], r["id"]) for r in csv.DictReader(f) if r["rome"] in METIERS]
     ids_actifs = {i for _, i in actives}
 
     # Dernière version connue de chaque offre active (les fichiers sont lus dans l'ordre des mois).
@@ -361,7 +362,8 @@ def main():
     serie = defaultdict(dict)
     with (RACINE / "data" / "serie.csv").open(encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            serie[r["date"]][r["rome"]] = int(r["total"])
+            if r["rome"] in METIERS:
+                serie[r["date"]][r["rome"]] = int(r["total"])
 
     resume = {
         "date": jour,
