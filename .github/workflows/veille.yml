@@ -1,18 +1,37 @@
-# La veille : chaque matin, GitHub lance l'extraction France Travail sur ses machines,
+# La veille : chaque lundi à 8 h (heure de Paris), GitHub lance l'extraction France Travail sur ses machines,
 # met à jour data/ et le résumé de la page, et enregistre le tout par un commit.
 # Les identifiants sont dans Settings -> Secrets and variables -> Actions (FT_CLIENT_ID, FT_CLIENT_SECRET).
 name: veille
 
 on:
   schedule:
-    - cron: "0 5 * * *"       # 5 h UTC = 7 h à Paris en été (6 h en hiver) ; GitHub ne connaît que l'UTC
-  workflow_dispatch:          # et le bouton « Run workflow » pour lancer à la main
+    # GitHub ne connaît que l'UTC : lundi 8 h à Paris = 6 h UTC en été (CEST), 7 h UTC en hiver (CET).
+    # On déclenche aux deux heures ; le job « heure » ne laisse passer que celle où il est 8 h à Paris.
+    - cron: "0 6 * * 1"
+    - cron: "0 7 * * 1"
+  workflow_dispatch:          # et le bouton « Run workflow » pour lancer à la main, à toute heure
 
 permissions:
   contents: write             # le workflow doit pouvoir pousser son commit
 
 jobs:
+  heure:
+    runs-on: ubuntu-latest
+    outputs:
+      lancer: ${{ steps.test.outputs.lancer }}
+    steps:
+      - id: test
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(TZ=Europe/Paris date +%H)" = "08" ]; then
+            echo "lancer=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "lancer=non" >> "$GITHUB_OUTPUT"
+            echo "Il n'est pas 8 h à Paris : l'autre déclenchement s'en charge."
+          fi
+
   extraire:
+    needs: heure
+    if: needs.heure.outputs.lancer == 'oui'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -341,7 +341,7 @@ function poserNavEtFiltres() {
   if (p) p.innerHTML =
     `<p style="margin:0 0 8px"><a href="mouvement.html#limites">Limites de ces chiffres</a></p>
      Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) → <code>scripts/resumer.py</code> → <code>data/resume.json</code> → ces pages (GitHub Pages).
-     Une Action GitHub relance la collecte chaque matin à 7 h. Identifiants dans les secrets du dépôt, jamais dans le code.
+     Une Action GitHub relance la collecte chaque lundi à 8 h (heure de Paris). Identifiants dans les secrets du dépôt, jamais dans le code.
      Adapté aux métiers du retail, de l'expérience client et de la direction commerciale internationale, à partir du dépôt de démonstration de l'IAE Clermont Auvergne (séminaires métiers).`;
 }
 

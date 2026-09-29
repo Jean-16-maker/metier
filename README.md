@@ -1,8 +1,8 @@
 # Le marché de mon métier — retail, expérience client et direction commerciale internationale
 
-Une veille quotidienne des offres d'emploi visées par le master marketing-vente,
+Une veille hebdomadaire des offres d'emploi visées par le master marketing-vente,
 spécialité DCIB (direction commerciale et international business), et le
-parcours management retail et expérience client. Chaque matin, une Action GitHub
+parcours management retail et expérience client. Chaque lundi à 8 h, une Action GitHub
 interroge l'API France Travail, enregistre les offres du jour et publie les
 chiffres sur GitHub Pages.
 
@@ -79,7 +79,7 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
                                             →  data/serie.csv                  par jour et par métier : total, nouvelles, modifiées
                        scripts/resumer.py   →  data/resume.json                ce que les pages affichent (+ data/geo/, cache des positions)
                        index.html + 4 pages →  https://jean-16-maker.github.io/metier/
-                       .github/workflows/veille.yml : GitHub relance tout ça chaque matin à 7 h
+                       .github/workflows/veille.yml : GitHub relance tout ça chaque lundi à 8 h (heure de Paris)
 ```
 
 - `scripts/extraire.py` — une requête `codeROME` par métier (token OAuth,
