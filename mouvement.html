@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Le marché bouge — retail, expérience client et direction commerciale internationale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=3">
+<link rel="stylesheet" href="assets/commun.css?v=5">
 </head>
 <body>
 <main>
@@ -16,19 +16,19 @@
   <div id="filtres-ici"></div>
 
   <div class="grille" style="margin-top:24px">
-    <div class="carte"><h3>Offres actives à chaque extraction</h3><div class="zone"><canvas id="g-serie"></canvas></div>
+    <div class="carte large"><h3>1. Combien d'offres sont publiées chaque semaine ? <small>— courbe des deux derniers mois</small></h3><div class="zone"><canvas id="g-semaines"></canvas></div>
       <p class="note" id="note-serie"></p></div>
-    <div class="carte"><h3>Fraîcheur des annonces</h3><div class="zone"><canvas id="g-fraicheur"></canvas></div>
-      <p class="note">Une annonce en ligne depuis plus de trois mois est souvent déjà pourvue, ou republiée en continu par une agence : candidatez d'abord aux fraîches.</p></div>
+    <div class="carte"><h3>2. Fraîcheur des annonces <small>— âge des offres, de la plus récente à la plus ancienne</small></h3><div class="zone"><canvas id="g-fraicheur"></canvas></div>
+      <p class="note">Seules les annonces de moins de deux mois sont gardées : candidatez d'abord aux plus fraîches.</p></div>
   </div>
 
   <h2 id="limites">Ce que ces chiffres n'autorisent pas à conclure</h2>
-  <p class="note">Un seul canal : France Travail n'héberge pas toutes les offres cadres (APEC, LinkedIn, Welcome to the Jungle en publient d'autres).
-  Les salaires sont ceux des offres qui les affichent, moins d'un tiers : biais probable vers le bas et vers les PME ; le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu).
+  <p class="note">Canaux : France Travail, complété par Adzuna ; ils n'hébergent pas toutes les offres cadres (APEC, LinkedIn, Welcome to the Jungle en publient d'autres).
+  Ne sont gardées que les annonces de moins de deux mois, avec un nom d'employeur et un salaire lisible, hors écoles et organismes de formation, sans doublon (même employeur, même intitulé, même département) : les chiffres décrivent les annonces les plus transparentes, pas tout le marché. Le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu).
   Le niveau de poste (assistant·e, chargé·e, responsable, directeur·rice) est déduit de l'intitulé de l'annonce : c'est une approximation, un « chef de projet » n'encadre pas toujours.
   La formation et la qualification ne sont renseignées que par une minorité d'annonces : les pourcentages qui s'y rapportent portent sur ce petit sous-ensemble, pas sur tout le marché.
   Les agences d'intérim et de recrutement sont surreprésentées parmi les employeurs et les secteurs : elles publient beaucoup, parfois la même offre plusieurs fois.
-  Un seul annonceur peut fausser une colonne entière : les réseaux de vente à domicile et de franchise publient des centaines d'annonces « commerciales » au texte identique, qui ne sont pas des postes salariés. Le filtre « Indépendant » permet de les mettre de côté.
+  Un seul annonceur peut fausser une colonne entière : les réseaux de vente à domicile et de franchise publient des centaines d'annonces « commerciales » au texte identique, qui ne sont pas des postes salariés. Le filtre « Freelance » permet de les mettre de côté.
   L'API ne renvoie que 1 150 offres par requête : les métiers généralistes (management de magasin de détail, relation commerciale grands comptes…) en ont souvent davantage, leur total est juste mais le détail n'en montre qu'une partie.
   Une langue citée dans une annonce n'est pas toujours une langue exigée (« l'anglais est un plus ») ; « export » ou « international » dans le texte ne dit pas quelle part du poste se joue hors de France.
   La grille d'outils est la nôtre, elle est dans <code>scripts/resumer.py</code>. Un point placé au centre d'une commune ou d'un département n'est pas l'adresse de l'employeur.</p>
@@ -36,23 +36,26 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=3"></script>
+<script src="assets/commun.js?v=5"></script>
 <script>
 /* ============ Le marché bouge ============ */
 function rendre(offres, D) {
   const f = Commun.f;
 
-  const serie = (D.serie || []).map(j => ({ date: j.date, total: [...f.metiers].reduce((s, c) => s + ((j.par_metier && j.par_metier[c]) || 0), 0) }));
-  dessiner("g-serie", "line",
-    { labels: serie.map(x => dateFr(x.date, true)), datasets: [{ data: serie.map(x => x.total), borderColor: couleur, backgroundColor: pale, fill: true, tension: .2, pointRadius: 4 }] },
-    { scales: { y: { beginAtZero: true } } });
-  document.getElementById("note-serie").textContent = serie.length < 2
-    ? "Une seule extraction pour l'instant : la tendance apparaîtra au fil des jours, l'Action GitHub relance la collecte chaque matin."
-    : `${serie.length} extractions, du ${dateFr(serie[0].date)} au ${dateFr(serie[serie.length - 1].date)}. Ce compte suit les métiers cochés, pas les autres filtres.`;
+  // Semaines (du lundi), dans l'ordre chronologique, y compris les semaines sans aucune offre.
+  const lundi = t => { const d = new Date(t); const j = (d.getUTCDay() + 6) % 7; return new Date(d.getTime() - j * 86400000).toISOString().slice(0, 10); };
+  const dates = offres.map(o => o.date).filter(Boolean).sort();
+  if (dates.length) {
+    const parSem = new Map();
+    for (let t = Date.parse(lundi(dates[0])); t <= Date.parse(lundi(dates[dates.length - 1])); t += 7 * 86400000) parSem.set(new Date(t).toISOString().slice(0, 10), 0);
+    dates.forEach(d => { const k = lundi(d); parSem.set(k, (parSem.get(k) || 0) + 1); });
+    courbe("g-semaines", [...parSem.keys()].map(k => "sem. du " + dateFr(k, true)), [...parSem.values()], "offres publiées");
+    document.getElementById("note-serie").textContent = `${dates.length} offres publiées entre le ${dateFr(dates[0])} et le ${dateFr(dates[dates.length - 1])}. La dernière semaine peut être incomplète.`;
+  }
 
-  const FRAIS = [["Moins de 7 jours", j => j < 7], ["7 à 30 jours", j => j >= 7 && j < 30], ["1 à 3 mois", j => j >= 30 && j < 90], ["Plus de 3 mois", j => j >= 90]];
+  const FRAIS = [["Moins de 7 jours", j => j < 7], ["7 à 14 jours", j => j >= 7 && j < 14], ["14 à 30 jours", j => j >= 14 && j < 30], ["30 à 60 jours", j => j >= 30]];
   const ages = offres.map(age).filter(j => j != null && j >= 0);
-  barres("g-fraicheur", FRAIS.map(x => x[0]), FRAIS.map(([, test]) => ages.filter(test).length), true, " offres");
+  colonnes("g-fraicheur", FRAIS.map(x => x[0]), FRAIS.map(([, test]) => ages.filter(test).length));
 }
 
 Commun.demarrer(rendre);

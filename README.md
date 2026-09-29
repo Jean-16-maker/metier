@@ -26,6 +26,19 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 3. Quelles langues, quels outils (CRM, ERP, merchandising, KPI) reviennent le plus ?
 4. Quelles enseignes et quels secteurs recrutent : distribution, luxe, industrie, services ?
 
+## Ce qui est gardé dans les chiffres
+
+`scripts/resumer.py` (fonction `nettoyer`) ne garde que les annonces :
+- publiées il y a **moins de 2 mois** (`AGE_MAX_JOURS`) ;
+- avec un **nom d'entreprise** et un **salaire lisible** (`EXIGER_ENTREPRISE`, `EXIGER_SALAIRE`) ;
+- qui ne viennent pas d'une **école ou d'un organisme de formation** (`ECOLES_NOM`, `ECOLES_SECTEUR`) ;
+- en **CDI, CDD, intérim, alternance ou freelance** (champ `famille`) ;
+- **sans doublon** : même employeur, même intitulé, même département, on garde la plus récente.
+
+Le décompte de ce qui est retiré, et pourquoi, est écrit dans `data/resume.json` (`retires`).
+Les pages présentent les graphiques dans un ordre de lecture fixe : camemberts pour les parts,
+colonnes dans l'ordre naturel (expérience, diplôme, salaire, âge), courbe pour le temps, barres classées pour les palmarès.
+
 ## Les métiers suivis
 
 7 codes ROME (la liste vit dans `scripts/extraire.py`, `METIERS`), en deux groupes :

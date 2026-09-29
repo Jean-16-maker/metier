@@ -66,8 +66,13 @@ const COUL_NIV = { assistant: "#a7c9ff", charge: "#5f9bf5", responsable: "#2a6ad
 const ENCRE_FONCEE = new Set(["assistant", "charge", "autre"]);
 const NIVEAUX_DEFAUT = [["assistant", "Assistant·e / junior"], ["charge", "Chargé·e"], ["responsable", "Responsable"], ["directeur", "Directeur·rice"], ["autre", "Autre"]];
 const FORMATIONS_DEFAUT = ["< Bac", "Bac", "Bac+2", "Bac+3/4", "Bac+5"];
-// Six familles de contrat, exclusives : une offre tombe dans une seule.
-const CONTRATS = [["cdi", "CDI"], ["cdd", "CDD"], ["alt", "Alternance"], ["mis", "Intérim"], ["indep", "Indépendant"], ["autre", "Autre"]];
+// Cinq types de contrat, exclusifs : une offre tombe dans un seul.
+const CONTRATS = [["cdi", "CDI"], ["cdd", "CDD"], ["mis", "Intérim"], ["alt", "Alternance"], ["indep", "Freelance"]];
+const COUL_CONTRAT = { cdi: "#0a5cff", cdd: "#5f9bf5", mis: "#ff6a00", alt: "#1a9e6e", indep: "#8e5cf7" };
+// Palette catégorielle des camemberts : huit teintes distinctes, la dernière (gris) sert pour « Autres ».
+const PALETTE = ["#0a5cff", "#ff6a00", "#1a9e6e", "#8e5cf7", "#e5484d", "#f5b301", "#00a3bf", "#8e8e93"];
+// Expérience demandée : du plus clair (débutant) au plus foncé (5 ans et plus), « non précisé » en gris.
+const COUL_EXP = ["#a7c9ff", "#7fb0fa", "#5f9bf5", "#2a6ad4", "#123a7a", "#b4b4bc"];
 const AURA = new Set(["01", "03", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74"]);
 const IDF = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
 const EXPS = ["Débutant accepté", "Moins d'un an", "1 à 2 ans", "3 à 4 ans", "5 ans et plus", "Non précisé"];
@@ -78,22 +83,24 @@ Chart.defaults.plugins.legend.display = false;
 let D, graphiques = {};
 let NIVEAUX = NIVEAUX_DEFAUT, FORMATIONS = FORMATIONS_DEFAUT;
 
-/* Famille de contrat d'une offre : l'alternance l'emporte sur le CDI/CDD qui la porte. */
+/* Famille de contrat d'une offre : calculée par resumer.py (champ « famille »).
+   Le repli ci-dessous ne sert qu'à lire un ancien resume.json. */
 function familleContrat(o) {
+  if (o.famille) return o.famille;
   const c = o.contrat || "", nat = o.nature || "";
   if (o.alternance || nat === "apprentissage" || nat === "professionnalisation") return "alt";
   if (c === "MIS") return "mis";
-  if (c === "LIB" || c === "FRA" || c === "CCE" || nat === "non_salarie") return "indep";
+  if (c === "LIB" || c === "CCE" || nat === "non_salarie") return "indep";
   if (c === "CDI") return "cdi";
   if (c === "CDD") return "cdd";
-  return "autre";
+  return "cdd";
 }
 const niv = o => (o && COUL_NIV[o.niveau]) ? o.niveau : "autre";
 const libNiv = k => (NIVEAUX.find(x => x[0] === k) || [k, k])[1];
 const libContrat = code => (D && D.contrats && D.contrats[code]) || code || "Non précisé";
 /* Le contrat tel qu'on l'annonce au lecteur : l'alternance passe devant le CDI/CDD
    qui la porte, pour dire partout la même chose que le filtre. */
-const libContratOffre = o => familleContrat(o) === "alt" ? "Alternance" : libContrat(o.contrat);
+const libContratOffre = o => (CONTRATS.find(x => x[0] === familleContrat(o)) || ["", "Autre"])[1];
 
 /* Une offre ouverte aux débutants. L'accueil annonce ce chiffre dans son lien vers
    « Ce qu'on vous demande », qui l'affiche aussi : une seule règle écrite une fois,
@@ -132,12 +139,12 @@ function secteurCourt(s) {
 /* ============================================================
    2) GRAPHIQUES : création la première fois, mise à jour ensuite
    ============================================================ */
-function dessiner(id, type, data, options) {
+function dessiner(id, type, data, options, plugins) {
   const el = document.getElementById(id);
   if (!el) return null;
   // resize() avant update() : la hauteur de la zone peut avoir changé avec le nombre de barres.
   if (graphiques[id]) { const g = graphiques[id]; g.data.labels = data.labels; g.data.datasets = data.datasets; g.resize(); g.update(); return g; }
-  graphiques[id] = new Chart(el, { type, data, options: Object.assign({ responsive: true, maintainAspectRatio: false, animation: false }, options) });
+  graphiques[id] = new Chart(el, { type, data, plugins: plugins || [], options: Object.assign({ responsive: true, maintainAspectRatio: false, animation: false }, options) });
   return graphiques[id];
 }
 
@@ -156,6 +163,43 @@ function barres(id, etiquettes, valeurs, horizontal = true, suffixe = "", teinte
       plugins: { tooltip: { callbacks: { label: c => c.parsed[horizontal ? "x" : "y"] + suffixe } } },
       scales: { x: { grid: { display: !horizontal }, beginAtZero: true },
                 y: { grid: { display: horizontal }, ticks: { autoSkip: !horizontal } } } });
+}
+
+
+/* Camembert : la part de chaque catégorie dans le total. Au-delà de `max` parts, le reste est
+   regroupé en « Autres » (toujours en dernier, en gris). L'infobulle donne le nombre et le pourcentage. */
+function camembert(id, etiquettes, valeurs, couleurs, max = 7) {
+  // Les parts vides n'ont ni tranche ni ligne de légende.
+  const garde = valeurs.map((v, i) => i).filter(i => valeurs[i] > 0);
+  let lab = garde.map(i => etiquettes[i]), val = garde.map(i => valeurs[i]), col = couleurs ? garde.map(i => couleurs[i]) : null;
+  if (lab.length > max) {
+    const reste = val.slice(max).reduce((a, b) => a + b, 0);
+    lab = lab.slice(0, max).concat("Autres"); val = val.slice(0, max).concat(reste);
+    if (col) col = col.slice(0, max).concat(PALETTE[7]);
+  }
+  const total = val.reduce((a, b) => a + b, 0);
+  dessiner(id, "doughnut",
+    { labels: lab.map(l => [].concat(l).join(" ")), datasets: [{ data: val, backgroundColor: col || lab.map((_, i) => PALETTE[i % 8]), borderColor: "#fff", borderWidth: 2 }] },
+    { cutout: "48%",
+      plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 12, boxHeight: 12, padding: 8, font: { size: 11 },
+                   generateLabels: ch => ch.data.labels.map((l, i) => ({ text: `${l} — ${pct(val[i], total)} %`, fillStyle: ch.data.datasets[0].backgroundColor[i], strokeStyle: "#fff", index: i })) } },
+                 tooltip: { callbacks: { label: c => `${c.label} : ${c.parsed} offre${c.parsed > 1 ? "s" : ""} (${pct(c.parsed, total)} %)` } } } });
+}
+
+/* Colonnes verticales dans l'ordre donné (pas de tri) : pour tout ce qui a un ordre naturel
+   — tranches d'expérience, diplômes, tranches de salaire, âge des annonces. */
+function colonnes(id, etiquettes, valeurs, teinte = couleur, titreY = "nombre d'offres", suffixe = " offres") {
+  dessiner(id, "bar",
+    { labels: etiquettes, datasets: [{ data: valeurs, backgroundColor: teinte, borderRadius: 4 }] },
+    { plugins: { tooltip: { callbacks: { label: c => c.parsed.y + suffixe } } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: titreY } } } });
+}
+
+/* Courbe dans l'ordre chronologique. */
+function courbe(id, etiquettes, valeurs, titreY = "nombre d'offres") {
+  dessiner(id, "line",
+    { labels: etiquettes, datasets: [{ data: valeurs, borderColor: couleur, backgroundColor: pale, fill: true, tension: .25, pointRadius: 3 }] },
+    { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: titreY } } } });
 }
 
 /* Barres empilées par niveau de poste. */
@@ -189,15 +233,21 @@ function fourchette(lot) {
   return [mn, Math.max(mx == null ? mn : mx, mn)];
 }
 function flottantes(id, lignes) {
-  // lignes : [{ label, n, paire:[min,max] }]
+  // lignes : [{ label, n, paire:[min,max] }]. Une barre simple par ligne, plus lisible qu'une barre flottante :
+  // sa longueur est le milieu de la fourchette médiane, écrit au bout de la barre ; l'infobulle donne la fourchette.
+  const milieu = l => Math.round((l.paire[0] + l.paire[1]) / 2);
+  const etiquetteBout = { id: "etiquetteBout", afterDatasetsDraw(ch) {
+    const { ctx } = ch; ctx.save(); ctx.font = "600 12px system-ui, sans-serif"; ctx.fillStyle = "#1d1d1f"; ctx.textBaseline = "middle";
+    ch.getDatasetMeta(0).data.forEach((barre, i) => { const v = ch.data.datasets[0].data[i]; if (v != null) ctx.fillText(Math.round(v / 1000) + " k€", barre.x + 6, barre.y); });
+    ctx.restore(); } };
   dessiner(id, "bar",
     { labels: lignes.map(l => [].concat(l.label, l.n + " offre" + (l.n > 1 ? "s" : ""))),
-      datasets: [{ data: lignes.map(l => l.paire), backgroundColor: lignes.map(l => l.teinte || couleur), borderRadius: 4, borderSkipped: false }] },
-    { indexAxis: "y",
-      plugins: { tooltip: { callbacks: { label: c => { const r = c.raw || []; return r.length < 2 ? "" :
-        [`${euro(r[0], 100)} → ${euro(r[1], 100)} brut par an`, `soit ${euro(net(r[0]), 10)} → ${euro(net(r[1]), 10)} net par mois`]; } } } },
-      scales: { x: { beginAtZero: true, ticks: { callback: v => Math.round(v / 1000) + " k€" } },
-                y: { grid: { display: true }, ticks: { autoSkip: false } } } });
+      datasets: [{ data: lignes.map(milieu), backgroundColor: lignes.map(l => l.teinte || couleur), borderRadius: 4, fourchette: lignes.map(l => l.paire) }] },
+    { indexAxis: "y", layout: { padding: { right: 44 } },
+      plugins: { tooltip: { callbacks: { label: c => { const r = c.dataset.fourchette[c.dataIndex] || [];
+        return [`fourchette : ${euro(r[0], 100)} → ${euro(r[1], 100)} brut par an`, `soit ${euro(net(r[0]), 10)} → ${euro(net(r[1]), 10)} net par mois`]; } } } },
+      scales: { x: { beginAtZero: true, title: { display: true, text: "salaire brut annuel (milieu de la fourchette médiane)" }, ticks: { callback: v => Math.round(v / 1000) + " k€" } },
+                y: { grid: { display: false }, ticks: { autoSkip: false } } } }, [etiquetteBout]);
 }
 
 /* ============================================================

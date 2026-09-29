@@ -24,6 +24,7 @@ h2 small { font-weight:400; color:var(--gris); font-size:.85rem; }
 .large { grid-column:1 / -1; }
 /* Chaque graphique vit dans une zone de hauteur fixe : lisible et prévisible, y compris sur mobile. */
 .zone { position:relative; height:320px; }
+.zone.ronde { height:400px; }
 .zone.haute { height:500px; }
 .zone.geante { height:880px; }
 #map { height:600px; border-radius:8px; }

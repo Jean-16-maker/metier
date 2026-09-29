@@ -23,6 +23,7 @@ import re
 import sys
 import time
 from collections import defaultdict
+from datetime import date, timedelta
 from pathlib import Path
 
 import requests
@@ -293,6 +294,85 @@ class Geocodeur:
         (self.dossier / "departements.json").write_text(json.dumps(self.departements), encoding="utf-8")
 
 
+# ---------------------------------------------------------------------------
+# Ce qu'on garde dans le résumé (les règles du groupe : annonces récentes, propres, uniques).
+# ---------------------------------------------------------------------------
+AGE_MAX_JOURS = 60            # publiée il y a moins de 2 mois
+EXIGER_ENTREPRISE = True      # pas d'annonce sans nom d'employeur
+EXIGER_SALAIRE = True         # pas d'annonce sans salaire lisible (smin renseigné)
+
+# Écoles et organismes de formation : leurs annonces recrutent des étudiants, pas des salariés.
+# Testé sur le nom de l'employeur, puis sur le secteur d'activité.
+ECOLES_NOM = re.compile(
+    r"\bformations?\b|\bécoles?\b|\becoles?\b|\biscod\b|\binstitut\b|\bcampus\b|\bacad[ée]mie\b|"
+    r"\bacademy\b|\buniversit|\bcfa\b|\bcfp\b|\bcnam\b|\bgreta\b|\bstudi\b|\bbusiness school\b|"
+    r"\bigs\b|\besgci\b|\binseec\b|\besc\b|\bpigier\b|\bcned\b|\baftec\b|\bgroupe es\b|\bwebschool\b",
+    re.IGNORECASE)
+ECOLES_SECTEUR = re.compile(r"enseignement|formation continue|formation profession|écoles? de|autres enseignements",
+                            re.IGNORECASE)
+
+
+def est_ecole(entreprise, secteur):
+    return bool(ECOLES_NOM.search(entreprise or "") or ECOLES_SECTEUR.search(secteur or ""))
+
+
+def famille_contrat(o):
+    """Les cinq types de contrat gardés : cdi, cdd, mis (intérim), alt (alternance), indep (freelance).
+    L'alternance l'emporte sur le CDI/CDD qui la porte ; les autres contrats (franchise, reprise…) sortent."""
+    c, nat = o.get("typeContrat") or "", nature(o)
+    if o.get("alternance") or nat in ("apprentissage", "professionnalisation"):
+        return "alt"
+    if c in ("MIS", "TTI", "DIN"):
+        return "mis"
+    if c in ("LIB", "CCE") or nat == "non_salarie" and c != "FRA":
+        return "indep"
+    if c in ("CDI", "DDI"):
+        return "cdi"
+    if c in ("CDD", "CDS", "SAI"):
+        return "cdd"
+    return None
+
+
+def cle_doublon(o):
+    """Une même annonce republiée (même employeur, même intitulé, même département)."""
+    norm = lambda t: re.sub(r"[^a-z0-9]+", " ", (t or "").lower().replace("é", "e").replace("è", "e")).strip()
+    intitule = re.sub(r"\b(h ?/ ?f|f ?/ ?h|h|f)\b", " ", norm(o["intitule"]))
+    return (norm(o["entreprise"]), " ".join(intitule.split()), o["dep"] or norm(o["lieu"]))
+
+
+def nettoyer(offres, jour):
+    """Applique les règles ci-dessus ; renvoie (offres gardées, décompte de ce qui est retiré et pourquoi)."""
+    retires = defaultdict(int)
+    gardees = []
+    limite = date.fromisoformat(jour) - timedelta(days=AGE_MAX_JOURS)
+    for o in offres:
+        try:
+            publiee = date.fromisoformat(o["date"])
+        except (TypeError, ValueError):
+            publiee = None
+        if publiee is None or publiee < limite:
+            retires["plus de 2 mois"] += 1
+        elif EXIGER_ENTREPRISE and not o["entreprise"]:
+            retires["sans nom d'entreprise"] += 1
+        elif est_ecole(o["entreprise"], o["secteur"]):
+            retires["école ou organisme de formation"] += 1
+        elif EXIGER_SALAIRE and o["smin"] is None:
+            retires["sans salaire"] += 1
+        elif not o["famille"]:
+            retires["contrat hors CDI/CDD/intérim/alternance/freelance"] += 1
+        else:
+            gardees.append(o)
+    # Doublons : on garde la plus récente de chaque groupe.
+    uniques = {}
+    for o in sorted(gardees, key=lambda x: x["date"] or "", reverse=True):
+        k = cle_doublon(o)
+        if k in uniques:
+            retires["doublon"] += 1
+        else:
+            uniques[k] = o
+    return list(uniques.values()), dict(retires)
+
+
 def main():
     jours = sorted((RACINE / "data" / "actives").glob("*.csv"))
     if not jours:
@@ -336,6 +416,8 @@ def main():
             "dep": departement(lieu),
             "lat": lat, "lon": lon, "prec": precision,
             "contrat": o.get("typeContrat"),
+            "famille": famille_contrat(o),
+            "source": "France Travail",
             "experience": o.get("experienceLibelle"),
             "alternance": bool(o.get("alternance")),
             "salaire": (o.get("salaire") or {}).get("libelle"),
@@ -357,6 +439,7 @@ def main():
             "postes": int(o.get("nombrePostes") or 1),
         })
     geo.sauver()
+    offres, retires = nettoyer(offres, jour)
 
     # Série : par jour et par métier
     serie = defaultdict(dict)
@@ -373,8 +456,8 @@ def main():
                      "actives": sum(1 for o in offres if o["rome"] == c)}
                     for c, (l, g, k) in METIERS.items()],
         "outils": list(OUTILS),
-        "contrats": {c: contrat_libelle(c)
-                     for c in sorted({o["contrat"] for o in offres if o["contrat"]})},
+        "contrats": {"cdi": "CDI", "cdd": "CDD", "mis": "Intérim", "alt": "Alternance", "indep": "Freelance"},
+        "retires": retires,
         "niveaux": NIVEAUX_LIBELLES,
         "formations": FORMATIONS,
         "versions_conservees": nb_versions,
@@ -389,6 +472,7 @@ def main():
         prec[o["prec"]] += 1
     print(f"Écrit : {sortie.relative_to(RACINE)} — {len(offres)} offres actives du {jour}, "
           f"{sortie.stat().st_size // 1024} Ko")
+    print("Retirées :", ", ".join(f"{k} {v}" for k, v in sorted(retires.items(), key=lambda kv: -kv[1])))
     print(f"Positions : {dict(prec)} ({geo.appels} appels geo.api.gouv.fr)")
     avec = [o for o in offres if o["smin"] is not None]
     part = 100 * len(avec) // len(offres) if offres else 0

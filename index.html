@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=3">
+<link rel="stylesheet" href="assets/commun.css?v=5">
 </head>
 <body>
 <main>
@@ -39,9 +39,10 @@
     <div id="map"></div>
     <p class="note" id="note-carte"></p></div>
   <div class="grille" style="margin-top:16px">
-    <div class="carte"><h3>Par département <small>— les 15 premiers</small></h3><div class="zone"><canvas id="g-departements"></canvas></div></div>
-    <div class="carte"><h3>Par type de contrat</h3><div class="zone"><canvas id="g-contrats"></canvas></div>
-      <p class="note">« Franchise », « Profession libérale » et « Profession commerciale » ne sont pas des emplois salariés : il s'agit de travailler à son compte. Le filtre « Indépendant », en haut, les regroupe.</p></div>
+    <div class="carte"><h3>Répartition par métier <small>— part des offres sélectionnées</small></h3><div class="zone ronde"><canvas id="g-metiers"></canvas></div></div>
+    <div class="carte"><h3>Répartition par niveau de poste <small>— de junior à directeur</small></h3><div class="zone ronde"><canvas id="g-niveaux"></canvas></div></div>
+    <div class="carte"><h3>Répartition par type de contrat</h3><div class="zone ronde"><canvas id="g-contrats"></canvas></div></div>
+    <div class="carte"><h3>Où sont les offres ? <small>— les 10 départements qui en ont le plus</small></h3><div class="zone"><canvas id="g-departements"></canvas></div></div>
   </div>
 
   <!-- ============ 4. LE RESTE, PAGE PAR PAGE ============ -->
@@ -56,7 +57,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=3"></script>
+<script src="assets/commun.js?v=5"></script>
 <script>
 /* ============ Accueil : chiffres, carte, départements, contrats ============ */
 let carte, calque;
@@ -71,8 +72,8 @@ function rendre(offres, D) {
   const debutants = offres.filter(debutantAccepte).length;
   const tuiles = [
     [n, "offres sélectionnées"],
-    [offres.filter(o => o.dep === "63").length, "dans le Puy-de-Dôme"],
-    [offres.filter(o => AURA.has(o.dep)).length, "en Auvergne-Rhône-Alpes"],
+    [offres.filter(o => IDF.has(o.dep)).length, "en Île-de-France"],
+    [offres.filter(o => o.dep && !IDF.has(o.dep)).length, "dans le reste de la France"],
     [offres.filter(o => familleContrat(o) === "alt").length, "en alternance"],
     [pct(debutants, n) + " %", `acceptent un débutant (${debutants})`],
     [pct(avecSal.length, n) + " %", `affichent un salaire (${avecSal.length})`],
@@ -98,12 +99,16 @@ function rendre(offres, D) {
   document.getElementById("note-carte").textContent =
     `${places} offres placées, ${n - places} sans lieu précis (« France », « Île-de-France »…). Les chiffres sont des grappes : cliquez pour zoomer, molette ou boutons pour naviguer. Point pâle : placé au centre du département.`;
 
-  const deps = compter(offres, o => o.dep || null).slice(0, 15);
-  barres("g-departements", deps.map(x => x[0]), deps.map(x => x[1]));
-  // Le détail des contrats, avec l'alternance sortie des CDI/CDD qui la portent :
-  // ce graphique dit alors la même chose que le filtre, en un peu plus précis.
-  const contrats = compter(offres, libContratOffre);
-  barres("g-contrats", contrats.map(x => x[0]), contrats.map(x => x[1]), true, " offres");
+  // Ordre de lecture : d'abord le métier, puis le niveau de poste, puis le contrat, enfin le lieu.
+  const parMetier = compter(offres, o => o.rome);
+  camembert("g-metiers", parMetier.map(x => (lib[x[0]] && lib[x[0]].libelle) || x[0]), parMetier.map(x => x[1]));
+  const niveauxPresents = NIVEAUX.map(([k, l]) => [k, l, offres.filter(o => niv(o) === k).length]).filter(x => x[2] > 0);
+  camembert("g-niveaux", niveauxPresents.map(x => x[1]), niveauxPresents.map(x => x[2]), niveauxPresents.map(x => COUL_NIV[x[0]]));
+  const contrats = CONTRATS.map(([k, l]) => [k, l, offres.filter(o => familleContrat(o) === k).length]).filter(x => x[2] > 0);
+  camembert("g-contrats", contrats.map(x => x[1]), contrats.map(x => x[2]), contrats.map(x => COUL_CONTRAT[x[0]]));
+  const deps = compter(offres, o => o.dep || null).slice(0, 10);
+  zoneSelonBarres("g-departements", deps.length, 30);
+  barres("g-departements", deps.map(x => x[0]), deps.map(x => x[1]), true, " offres");
 
   /* ---- Le chiffre-clé de chaque page ---- */
   const employeurs = new Set(offres.map(o => o.entreprise).filter(Boolean)).size;
