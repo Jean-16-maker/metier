@@ -59,7 +59,7 @@ const dateFr = (s, bref = false) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(
 const age = o => { const jour = Date.parse(D.date), t = Date.parse(o.date); return (isFinite(jour) && isFinite(t)) ? (jour - t) / 86400000 : null; };
 
 const couleur = "#0a5cff", pale = "rgba(10,92,255,.25)";
-const COULEURS = { Marketing: "#0a5cff", Digital: "#ff6a00", Frontière: "#8e8e93" };
+const COULEURS = { International: "#0a5cff", "Développement": "#ff6a00", "Achats & douane": "#1a9e6e", Frontière: "#8e8e93" };
 // Palette des niveaux : du clair au foncé, assistant → directeur, « autre » en gris. Valable sur toute la page.
 const COUL_NIV = { assistant: "#a7c9ff", charge: "#5f9bf5", responsable: "#2a6ad4", directeur: "#123a7a", autre: "#b4b4bc" };
 // Sur ces trois teintes claires, le texte blanc n'est pas lisible : on écrit en encre foncée.
@@ -267,7 +267,7 @@ function poserNavEtFiltres() {
     `<p style="margin:0 0 8px"><a href="mouvement.html#limites">Limites de ces chiffres</a></p>
      Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) → <code>scripts/resumer.py</code> → <code>data/resume.json</code> → ces pages (GitHub Pages).
      Une Action GitHub relance la collecte chaque matin à 7 h. Identifiants dans les secrets du dépôt, jamais dans le code.
-     Dépôt de démonstration — M2 MOD, IAE Clermont Auvergne, séminaires métiers.`;
+     Adapté aux métiers du commerce international, à partir du dépôt de démonstration de l'IAE Clermont Auvergne (séminaires métiers).`;
 }
 
 /* ============================================================

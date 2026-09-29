@@ -34,25 +34,28 @@ from extraire import METIERS  # noqa: E402  (la liste des métiers vit dans un s
 # Les outils et compétences que l'on cherche dans les annonces : c'est VOTRE grille, adaptez-la.
 # Chaque entrée : libellé affiché -> variantes cherchées (mot entier, insensible à la casse).
 OUTILS = {
-    "SEO": ["seo", "référencement naturel"],
-    "SEA / Google Ads": ["sea", "google ads", "adwords"],
-    "Meta Ads": ["meta ads", "facebook ads", "instagram ads"],
-    "Google Analytics": ["google analytics", "ga4", "analytics"],
-    "HubSpot": ["hubspot"],
-    "CRM / Salesforce": ["crm", "salesforce"],
-    "Emailing": ["emailing", "e-mailing", "newsletter", "mailchimp", "brevo", "sendinblue"],
-    "Réseaux sociaux": ["réseaux sociaux", "social media", "community management"],
-    "LinkedIn": ["linkedin"],
-    "WordPress": ["wordpress"],
-    "Shopify / e-commerce": ["shopify", "prestashop", "e-commerce", "ecommerce"],
-    "Canva": ["canva"],
-    "Suite Adobe": ["photoshop", "illustrator", "indesign", "adobe"],
+    "Incoterms": ["incoterm", "incoterms"],
+    "Douane / dédouanement": ["douane", "douanes", "douanier", "douanière", "dédouanement",
+                              "déclaration en douane", "oea", "nomenclature douanière"],
+    "Crédit documentaire": ["crédit documentaire", "credoc", "lettre de crédit", "remise documentaire"],
+    "Transport international": ["transitaire", "fret", "maritime", "aérien", "conteneur", "affrètement"],
+    "Prospection / salons": ["prospection", "salon", "salons", "foire", "foires"],
+    "Réponse à appels d'offres": ["appel d'offres", "appels d'offres", "tender", "tenders"],
+    "Négociation": ["négociation", "négocier", "negotiation"],
+    "ERP / SAP": ["erp", "sap", "oracle", "sage", "cegid", "dynamics"],
+    "CRM / Salesforce": ["crm", "salesforce", "hubspot"],
     "Excel": ["excel"],
-    "Power BI / Looker": ["power bi", "looker", "data studio"],
-    "SQL / Python": ["sql", "python"],
-    "Marketing automation": ["automation", "automatisation", "zapier", "make", "n8n"],
-    "IA générative": ["ia", "intelligence artificielle", "chatgpt", "ia générative", "genai", "llm"],
-    "Anglais": ["anglais", "english"],
+    "Power BI / Qlik": ["power bi", "powerbi", "qlik", "tableau software"],
+    "LinkedIn": ["linkedin"],
+    "Anglais": ["anglais", "english", "toeic", "toefl", "bilingue"],
+    "Allemand": ["allemand", "german", "deutsch"],
+    "Espagnol": ["espagnol", "spanish", "español"],
+    "Italien": ["italien", "italian"],
+    "Portugais": ["portugais", "portuguese"],
+    "Chinois": ["chinois", "mandarin", "chinese"],
+    "Arabe": ["arabe", "arabic"],
+    "Déplacements à l'étranger": ["déplacements à l'étranger", "déplacements internationaux",
+                                  "voyages à l'étranger", "mobilité internationale"],
 }
 REGEX_OUTILS = {nom: re.compile(r"(?<![\w-])(" + "|".join(re.escape(v) for v in variantes) + r")(?![\w-])")
                 for nom, variantes in OUTILS.items()}
@@ -62,12 +65,14 @@ GEO = "https://geo.api.gouv.fr"
 # Niveau du poste, lu dans l'intitulé : l'ordre compte (un « directeur marketing » n'est pas
 # un « chargé »). Première expression qui correspond, en minuscules.
 NIVEAUX = [
-    ("directeur", r"directeur|directrice|\bhead of\b|\bcdo\b|\bcmo\b|\bvp\b"),
-    ("responsable", r"responsable|manager|\bchef|\bcheffe|\blead\b|\bhead\b"),
+    ("directeur", r"directeur|directrice|\bhead of\b|\bcso\b|\bcpo\b|\bvp\b|export director|sales director"),
+    ("responsable", r"responsable|manager|\bchef|\bcheffe|\blead\b|\bhead\b|key account|\bkam\b"),
     ("assistant", r"assistant|alternan|apprenti|stagiaire|\bstage\b|junior"),
     ("charge", r"charg[ée]|consultant|analyste|analyst|spécialiste|specialist|traffic|community"
                 r"|expert|technicien|conseiller|animateur|référenceur|rédacteur|designer"
-                r"|développeur|business developer|ingénieur|gestionnaire|coordinateur|superviseur"),
+                r"|développeur|business developer|ingénieur|gestionnaire|coordinateur|superviseur"
+                r"|commercial|attaché|acheteu|approvisionneu|déclarant|agent|affréteu|négociat"
+                r"|sales|buyer|\badv\b"),
 ]
 REGEX_NIVEAUX = [(cle, re.compile(motif, re.IGNORECASE)) for cle, motif in NIVEAUX]
 NIVEAUX_LIBELLES = [

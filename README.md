@@ -1,66 +1,66 @@
-# Le marché de mon métier — les métiers du marketing
+# Le marché de mon métier — les métiers du commerce international
 
-### 👉 **[Voir le site : vincentfavarin.github.io/metier](https://vincentfavarin.github.io/metier/)**
+Une veille quotidienne des offres d'emploi du commerce international : export,
+import, développement commercial, achats, transit et douane. Chaque matin, une
+Action GitHub interroge l'API France Travail, enregistre les offres du jour et
+publie les chiffres sur GitHub Pages.
 
-Le site est mis à jour chaque matin par une Action GitHub : elle interroge
-l'API France Travail, enregistre les offres du jour et publie les chiffres.
+Adapté du dépôt de démonstration
+[VincentFavarin/metier](https://github.com/VincentFavarin/metier) (métiers du
+marketing, IAE Clermont Auvergne) : même chaîne API → données → Action planifiée
+→ pages, autres métiers, autre grille d'outils.
 
-| | |
+| Page | |
 |---|---|
-| [Accueil](https://vincentfavarin.github.io/metier/) | les filtres, les chiffres, la carte de France |
-| [Ce que ça paie](https://vincentfavarin.github.io/metier/salaires.html) | fourchettes par niveau, métier, contrat, territoire |
-| [Ce qu'on vous demande](https://vincentfavarin.github.io/metier/exigences.html) | expérience, diplôme, outils, compétences |
-| [Qui recrute](https://vincentfavarin.github.io/metier/recruteurs.html) | entreprises, secteurs, employeurs ouverts aux débutants |
-| [Le marché bouge](https://vincentfavarin.github.io/metier/mouvement.html) | les extractions successives, la fraîcheur des annonces |
-
-Dossier de travail pour la séance « Écouter le marché de votre métier »
-(M2 MOD, IAE Clermont Auvergne). Dépôt de démonstration : il montre ce que
-l'on attend d'un dossier `avenir`, étape par étape, et la chaîne complète
-API → données → Action planifiée → page GitHub Pages.
+| `index.html` | les filtres, les chiffres, la carte de France |
+| `salaires.html` | fourchettes par niveau, métier, contrat, territoire |
+| `exigences.html` | expérience, diplôme, outils, langues, compétences |
+| `recruteurs.html` | entreprises, secteurs, employeurs ouverts aux débutants |
+| `mouvement.html` | les extractions successives, la fraîcheur des annonces |
 
 ## Le métier, tel que le marché le nomme
 
-- **Intitulé principal** : chargé / chargée de marketing digital
-- **Variantes rencontrées dans les offres** : chef de projet marketing digital,
-  chef de produit digital, traffic manager, CRM manager, chargé d'acquisition
-- **Code ROME** : **M1718** — Chargé / Chargée de marketing digital
-  (le README disait M1705 « Marketing » ; c'est la première extraction qui a
-  donné le bon code : 14 offres sur 22 étaient en M1718)
+- **Intitulé principal** : commercial / commerciale export
+- **Variantes rencontrées dans les offres** : export area manager, responsable
+  de zone, business developer international, assistant(e) import-export,
+  ADV export, acheteur international, déclarant(e) en douane
+- **Code ROME de référence** : **D1433** — Commercial / Commerciale export
+  (ROME 4.0, arborescence du 15/06/2026)
 
 ## Les questions que je pose à ce marché
 
-1. Combien d'offres, et où : Clermont / Puy-de-Dôme, Auvergne-Rhône-Alpes,
-   France, télétravail ?
+1. Combien d'offres, et où : ma région, l'Île-de-France, les ports et
+   plateformes logistiques (Le Havre, Marseille, Lyon, Lille), l'étranger ?
 2. Quels contrats et quels salaires affichés ?
-3. Quels outils et compétences reviennent le plus — et lesquels la formation
-   ne me donnera pas ?
-4. Quelles entreprises publient le plus cet intitulé ?
-
-## Ce que la première journée a appris (22/09/2026)
-
-Trois requêtes, même jour, même API :
-
-| Requête | Offres | Lecture |
-|---|---|---|
-| `motsCles = "chef de projet marketing digital"` | 22 | trop étroit, et du bruit (PMO, communication) |
-| `codeROME = M1718` | 113 | le référentiel : homogène, c'est la requête de la veille |
-| `motsCles = "marketing digital"` | 424 | large, mais 191 annonces identiques d'un même réseau (M1716) : à dédoublonner avant de compter |
-
-Sur M1718 : 0 offre dans le 63, 11 en Auvergne-Rhône-Alpes, Paris et
-Hauts-de-Seine en tête ; 27 % des offres affichent un salaire, médiane
-31 000 → 35 700 € annuels ; réseaux sociaux, anglais, SEO/SEA, GA4 et
-« IA » reviennent le plus.
+3. Quelles langues, au-delà de l'anglais ? Quels savoirs techniques
+   (Incoterms, douane, crédit documentaire, ERP) reviennent le plus ?
+4. Quelles entreprises et quels secteurs recrutent : industriels exportateurs,
+   négoce, commissionnaires de transport ?
 
 ## Les métiers suivis
 
-23 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
-Travail (la liste vit dans `scripts/extraire.py`, `METIERS`) : le cœur
-marketing (M1718 chargé de marketing digital, M1716, M1705, M1703, M1620,
-M1706, M1430, M1711), le digital (E1113 e-commerce, D1438, E1101 community
-manager, E1124, E1405 SEO, M1886, M1426, M1719 et E1406 influence — 0 offre
-aujourd'hui, on surveille) et, décochés par défaut, la frontière avec la
-communication et le commerce (E1112, E1103, E1107, E1404, D1506, D1415 CRM).
-Au 22/09/2026 : 3 362 offres actives.
+23 codes ROME choisis parmi les 1 911 fiches du référentiel France Travail (la
+liste vit dans `scripts/extraire.py`, `METIERS`), en quatre groupes :
+
+- **International** — D1433 commercial export, D1414 responsable de zone
+  internationale, D1429 assistant import-export, D1409 ADV (dont ADV export),
+  N1204 coordinateur transit import-export.
+- **Développement** — M1707 responsable du développement commercial (dont
+  responsable commercial international), M1715 directeur commercial (dont
+  export), D1406 directeur des ventes (dont ventes internationales), D1444
+  responsable grands comptes, D1420 ingénieur d'affaires.
+- **Achats & douane** — M1101 acheteur (dont acheteur international, sourcing),
+  M1102 directeur des achats, D1431 assistant achat, N1202 agent de transit,
+  N1203 déclarant en douane, N1205 responsable de service transit, N4106
+  responsable de douane, N1201 affréteur.
+- **Frontière**, décochés par défaut — D1402 commercial grands comptes, D1407
+  technico-commercial, D1401 assistant commercial, M1703 chef de produit, N1301
+  responsable logistique. Gros volumes, peu d'international : l'API plafonne à
+  1 150 offres par requête, le détail de ces métiers est donc partiel.
+
+La grille des outils et compétences cherchés dans les annonces (Incoterms,
+douane, crédit documentaire, ERP/SAP, CRM, langues, déplacements…) est dans
+`scripts/resumer.py`, `OUTILS` : adaptez-la.
 
 ## La chaîne
 
@@ -100,7 +100,7 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
 
 ## Volume et limites GitHub
 
-Jour 1 : 13 Mo de brut ; ensuite seulement le flux (nouvelles et modifiées),
+Mesuré sur la version marketing (≈ 3 400 offres) : jour 1, 13 Mo de brut ; ensuite seulement le flux (nouvelles et modifiées),
 de l'ordre de 2 à 3 Mo par jour, soit ~1 Go par an. GitHub gratuit : dépôt
 1 Go recommandé, fichier ≤ 100 Mo, Pages 1 Go publié et 100 Go/mois de bande
 passante, Actions illimitées sur un dépôt public. Quand le brut dépassera
@@ -110,6 +110,8 @@ gardera que les derniers mois.
 
 ## Faire tourner chez soi
 
+Windows :
+
 ```
 py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -118,6 +120,18 @@ copy .env.example .env        (puis remplir avec ses identifiants francetravail.
 .venv\Scripts\python.exe scripts\extraire.py
 .venv\Scripts\python.exe scripts\resumer.py
 .venv\Scripts\python.exe -m http.server 8125      (puis http://localhost:8125)
+```
+
+macOS / Linux :
+
+```
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env          (puis remplir avec ses identifiants francetravail.io)
+.venv/bin/python scripts/extraire.py --verifier
+.venv/bin/python scripts/extraire.py
+.venv/bin/python scripts/resumer.py
+.venv/bin/python -m http.server 8125           (puis http://localhost:8125)
 ```
 
 ## Faire tourner sans soi (GitHub)
