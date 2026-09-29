@@ -341,36 +341,38 @@ def cle_doublon(o):
 
 
 def nettoyer(offres, jour):
-    """Applique les règles ci-dessus ; renvoie (offres gardées, décompte de ce qui est retiré et pourquoi)."""
-    retires = defaultdict(int)
-    gardees = []
+    """Applique les règles ci-dessus, une par une et dans cet ordre.
+
+    Renvoie (offres gardées, décompte de ce qui est retiré et pourquoi, trace) ; la trace est la suite
+    [libellé, offres restantes, offres retirées] que la page affiche avant tout graphique."""
     limite = date.fromisoformat(jour) - timedelta(days=AGE_MAX_JOURS)
-    for o in offres:
+
+    def recente(o):
         try:
-            publiee = date.fromisoformat(o["date"])
+            return date.fromisoformat(o["date"]) >= limite
         except (TypeError, ValueError):
-            publiee = None
-        if publiee is None or publiee < limite:
-            retires["plus de 2 mois"] += 1
-        elif EXIGER_ENTREPRISE and not o["entreprise"]:
-            retires["sans nom d'entreprise"] += 1
-        elif est_ecole(o["entreprise"], o["secteur"]):
-            retires["école ou organisme de formation"] += 1
-        elif EXIGER_SALAIRE and o["smin"] is None:
-            retires["sans salaire"] += 1
-        elif not o["famille"]:
-            retires["contrat hors CDI/CDD/intérim/alternance/freelance"] += 1
-        else:
-            gardees.append(o)
+            return False
+
+    etapes = [
+        ("Moins de 2 mois", "plus de 2 mois", recente),
+        ("Avec un nom d'employeur", "sans nom d'entreprise", lambda o: not EXIGER_ENTREPRISE or bool(o["entreprise"])),
+        ("Hors écoles et organismes de formation", "école ou organisme de formation", lambda o: not est_ecole(o["entreprise"], o["secteur"])),
+        ("Avec un salaire lisible", "sans salaire", lambda o: not EXIGER_SALAIRE or o["smin"] is not None),
+        ("CDI, CDD, intérim, alternance ou freelance", "contrat hors CDI/CDD/intérim/alternance/freelance", lambda o: bool(o["famille"])),
+    ]
+    retires, trace, restantes = {}, [["Offres au départ", len(offres), 0]], offres
+    for libelle, raison, garde in etapes:
+        suivantes = [o for o in restantes if garde(o)]
+        retires[raison] = len(restantes) - len(suivantes)
+        trace.append([libelle, len(suivantes), len(restantes) - len(suivantes)])
+        restantes = suivantes
     # Doublons : on garde la plus récente de chaque groupe.
     uniques = {}
-    for o in sorted(gardees, key=lambda x: x["date"] or "", reverse=True):
-        k = cle_doublon(o)
-        if k in uniques:
-            retires["doublon"] += 1
-        else:
-            uniques[k] = o
-    return list(uniques.values()), dict(retires)
+    for o in sorted(restantes, key=lambda x: x["date"] or "", reverse=True):
+        uniques.setdefault(cle_doublon(o), o)
+    retires["doublon"] = len(restantes) - len(uniques)
+    trace.append(["Sans doublon", len(uniques), len(restantes) - len(uniques)])
+    return list(uniques.values()), retires, trace
 
 
 # ---------------------------------------------------------------------------
@@ -502,7 +504,7 @@ def main():
         })
     offres += lire_adzuna(geo, jour)
     geo.sauver()
-    offres, retires = nettoyer(offres, jour)
+    offres, retires, trace = nettoyer(offres, jour)
 
     # Série : par jour et par métier
     serie = defaultdict(dict)
@@ -521,6 +523,7 @@ def main():
         "outils": list(OUTILS),
         "contrats": {"cdi": "CDI", "cdd": "CDD", "mis": "Intérim", "alt": "Alternance", "indep": "Freelance"},
         "retires": retires,
+        "trace": trace,
         "niveaux": NIVEAUX_LIBELLES,
         "formations": FORMATIONS,
         "versions_conservees": nb_versions,

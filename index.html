@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=5">
+<link rel="stylesheet" href="assets/commun.css?v=6">
 </head>
 <body>
 <main>
@@ -38,11 +38,13 @@
     </div>
     <div id="map"></div>
     <p class="note" id="note-carte"></p></div>
+  <div class="carte" style="margin-top:16px"><h3>De la collecte aux offres analysées <small>— ce qui a été retiré, et pourquoi</small></h3>
+    <div class="zone"><canvas id="g-trace"></canvas></div><p class="lecture" id="l-trace"></p></div>
   <div class="grille" style="margin-top:16px">
-    <div class="carte"><h3>Répartition par métier <small>— part des offres sélectionnées</small></h3><div class="zone ronde"><canvas id="g-metiers"></canvas></div></div>
-    <div class="carte"><h3>Répartition par niveau de poste <small>— de junior à directeur</small></h3><div class="zone ronde"><canvas id="g-niveaux"></canvas></div></div>
-    <div class="carte"><h3>Répartition par type de contrat</h3><div class="zone ronde"><canvas id="g-contrats"></canvas></div></div>
-    <div class="carte"><h3>Où sont les offres ? <small>— les 10 départements qui en ont le plus</small></h3><div class="zone"><canvas id="g-departements"></canvas></div></div>
+    <div class="carte"><h3>Répartition par métier <small>— part des offres sélectionnées</small></h3><div class="zone ronde"><canvas id="g-metiers"></canvas></div><p class="lecture" id="l-metiers"></p></div>
+    <div class="carte"><h3>Répartition par niveau de poste <small>— de junior à directeur</small></h3><div class="zone ronde"><canvas id="g-niveaux"></canvas></div><p class="lecture" id="l-niveaux"></p></div>
+    <div class="carte"><h3>Répartition par type de contrat</h3><div class="zone ronde"><canvas id="g-contrats"></canvas></div><p class="lecture" id="l-contrats"></p></div>
+    <div class="carte"><h3>Où sont les offres ? <small>— les 10 départements qui en ont le plus</small></h3><div class="zone"><canvas id="g-departements"></canvas></div><p class="lecture" id="l-departements"></p></div>
   </div>
 
   <!-- ============ 4. LE RESTE, PAGE PAR PAGE ============ -->
@@ -57,7 +59,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=5"></script>
+<script src="assets/commun.js?v=6"></script>
 <script>
 /* ============ Accueil : chiffres, carte, départements, contrats ============ */
 let carte, calque;
@@ -99,6 +101,21 @@ function rendre(offres, D) {
   document.getElementById("note-carte").textContent =
     `${places} offres placées, ${n - places} sans lieu précis (« France », « Île-de-France »…). Les chiffres sont des grappes : cliquez pour zoomer, molette ou boutons pour naviguer. Point pâle : placé au centre du département.`;
 
+  /* ---- Trace du nettoyage : avant tout graphique, d'où viennent les offres analysées (TD 1) ---- */
+  const trace = D.trace || [];
+  if (trace.length) {
+    zoneSelonBarres("g-trace", trace.length, 34);
+    dessiner("g-trace", "bar",
+      { labels: trace.map(t => [].concat(t[0], t[2] ? "− " + t[2].toLocaleString("fr-FR") : "")),
+        datasets: [{ data: trace.map(t => t[1]), backgroundColor: trace.map((t, i) => i === 0 ? "#a7c9ff" : i === trace.length - 1 ? "#2a6ad4" : "#5f9bf5"), borderRadius: 4 }] },
+      { indexAxis: "y", layout: { padding: { right: 50 } },
+        plugins: { tooltip: { callbacks: { label: c => `${c.parsed.x.toLocaleString("fr-FR")} offres restantes` } } },
+        scales: { x: { beginAtZero: true, title: { display: true, text: "offres restantes" } }, y: { grid: { display: false }, ticks: { autoSkip: false } } } },
+      [{ id: "boutBarre", afterDatasetsDraw(ch) { const { ctx } = ch; ctx.save(); ctx.font = "600 12px system-ui, sans-serif"; ctx.fillStyle = "#1d1d1f"; ctx.textBaseline = "middle";
+          ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(trace[i][1].toLocaleString("fr-FR"), b.x + 6, b.y)); ctx.restore(); } }]);
+    lecture("l-trace", `On part de ${trace[0][1].toLocaleString("fr-FR")} offres collectées et on en garde ${trace[trace.length - 1][1].toLocaleString("fr-FR")} : les analyses portent sur ces ${trace[trace.length - 1][1].toLocaleString("fr-FR")} offres, pas sur ${trace[0][1].toLocaleString("fr-FR")} (la plus forte perte vient des annonces sans salaire : ${trace.find(t => /salaire/.test(t[0]))[2].toLocaleString("fr-FR")}).`);
+  }
+
   // Ordre de lecture : d'abord le métier, puis le niveau de poste, puis le contrat, enfin le lieu.
   const parMetier = compter(offres, o => o.rome);
   camembert("g-metiers", parMetier.map(x => (lib[x[0]] && lib[x[0]].libelle) || x[0]), parMetier.map(x => x[1]));
@@ -109,6 +126,12 @@ function rendre(offres, D) {
   const deps = compter(offres, o => o.dep || null).slice(0, 10);
   zoneSelonBarres("g-departements", deps.length, 30);
   barres("g-departements", deps.map(x => x[0]), deps.map(x => x[1]), true, " offres");
+
+  // Une phrase de lecture sous chaque graphique : ce qu'on voit, sur combien d'offres.
+  if (parMetier.length) lecture("l-metiers", `${(lib[parMetier[0][0]] || {}).libelle || parMetier[0][0]} est le métier le plus représenté : ${parMetier[0][1]} offres sur ${n} (${pct(parMetier[0][1], n)} %).`);
+  if (niveauxPresents.length) { const top = [...niveauxPresents].sort((a, b) => b[2] - a[2])[0]; lecture("l-niveaux", `Niveau le plus fréquent : ${top[1]}, ${top[2]} offres sur ${n} (${pct(top[2], n)} %) ; niveau déduit de l'intitulé.`); }
+  if (contrats.length) { const top = [...contrats].sort((a, b) => b[2] - a[2])[0]; lecture("l-contrats", `${top[1]} : ${top[2]} offres sur ${n} (${pct(top[2], n)} %). Un contrat non précisé par Adzuna est supposé CDI.`); }
+  if (deps.length) lecture("l-departements", `Le département ${deps[0][0]} compte le plus d'offres : ${deps[0][1]} sur ${n} (${pct(deps[0][1], n)} %) ; les offres sans département ne sont pas comptées.`);
 
   /* ---- Le chiffre-clé de chaque page ---- */
   const employeurs = new Set(offres.map(o => o.entreprise).filter(Boolean)).size;

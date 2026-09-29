@@ -91,3 +91,12 @@ a.lien span i { font-style:normal; color:var(--accent); font-weight:600; }
 
 @media (max-width:880px) { .filtres { grid-template-columns:1fr; } }
 @media (max-width:480px) { main { padding:20px 12px 48px; } h1 { font-size:1.45rem; } #map { height:420px; } }
+
+/* Phrase de lecture sous un graphique, tableaux de fréquences */
+.lecture { font-size:.85rem; color:#3a3a3f; margin:8px 0 0; }
+.lecture .src { color:#86868b; display:block; }
+table.freq { border-collapse:collapse; width:100%; font-size:.85rem; margin-top:10px; }
+table.freq th, table.freq td { padding:5px 8px; border-bottom:1px solid #e5e5ea; text-align:right; }
+table.freq th:first-child, table.freq td:first-child { text-align:left; }
+table.freq tr.total td { font-weight:600; border-top:2px solid #c7c7cc; }
+table.freq tr.manquant td { color:#86868b; font-style:italic; }

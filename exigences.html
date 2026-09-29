@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ce qu'on vous demande — retail, expérience client et direction commerciale internationale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=5">
+<link rel="stylesheet" href="assets/commun.css?v=6">
 </head>
 <body>
 <main>
@@ -17,17 +17,17 @@
 
   <div class="chiffres" id="chiffres-demande" style="margin-top:24px"></div>
   <div class="grille" style="margin-top:16px">
-    <div class="carte"><h3>1. Combien d'expérience faut-il ? <small>— part des offres par tranche, de débutant à 5 ans et plus</small></h3><div class="zone ronde"><canvas id="g-experience"></canvas></div></div>
-    <div class="carte"><h3>2. Quel diplôme demande-t-on ? <small id="sous-formation">— seules les offres qui le précisent</small></h3><div class="zone"><canvas id="g-formation"></canvas></div></div>
+    <div class="carte large"><h3>1. Combien d'expérience faut-il ? <small>— en années, dans l'ordre ; « exigée, sans durée » à part</small></h3><div class="zone"><canvas id="g-experience"></canvas></div><p class="lecture" id="l-experience"></p><div id="t-experience"></div></div>
+    <div class="carte"><h3>2. Quel diplôme demande-t-on ? <small id="sous-formation">— seules les offres qui le précisent</small></h3><div class="zone"><canvas id="g-formation"></canvas></div><p class="lecture" id="l-formation"></p></div>
     <div class="carte large"><h3>3. Quels outils et savoirs sont cités ? <small>— part des offres qui citent chacun, du plus au moins cité</small></h3><div class="zone geante"><canvas id="g-outils"></canvas></div>
-      <p class="note" id="note-outils"></p></div>
-    <div class="carte large"><h3>4. Les compétences que France Travail associe à ces offres <small>— les 12 plus fréquentes, du plus au moins fréquent</small></h3><div class="zone haute"><canvas id="g-competences"></canvas></div></div>
+      <p class="lecture" id="l-outils"></p><p class="note" id="note-outils"></p></div>
+    <div class="carte large"><h3>4. Les compétences que France Travail associe à ces offres <small>— les 12 plus fréquentes, du plus au moins fréquent</small></h3><div class="zone haute"><canvas id="g-competences"></canvas></div><p class="lecture" id="l-competences"></p></div>
   </div>
 
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=5"></script>
+<script src="assets/commun.js?v=6"></script>
 <script>
 /* ============ Ce qu'on vous demande ============ */
 function rendre(offres, D) {
@@ -46,9 +46,16 @@ function rendre(offres, D) {
   ];
   document.getElementById("chiffres-demande").innerHTML = tuiles2.map(([v, l]) => `<div class="chiffre"><b>${v}</b><span>${l}</span></div>`).join("");
 
+  // Expérience recodée en années, dans l'ordre : colonnes + tableau d'effectifs et de fréquences (TD 1)
   const parExp = EXPS.map(t => offres.filter(o => trancheExp(o) === t).length);
-  camembert("g-experience", EXPS, parExp, COUL_EXP, 6);
-  colonnes("g-formation", FORMATIONS, FORMATIONS.map(fo => avecForm.filter(o => o.formation === fo).length), couleur, "nombre d'offres");
+  const sansExp = n - parExp.reduce((a, b) => a + b, 0);
+  const valides = parExp.slice(0, EXPS.indexOf("Exigée, sans durée")).reduce((a, b) => a + b, 0);
+  colonnes("g-experience", EXPS, parExp, EXPS.map(t => t === "Exigée, sans durée" ? "#b4b4bc" : couleur));
+  tableauFrequences("t-experience",
+    EXPS.slice(0, -1).map((t, i) => [t, parExp[i]]).filter(x => x[1] > 0), n, valides,
+    [["Exigée, sans durée", parExp[EXPS.length - 1]], ["Non renseignée", sansExp]].filter(x => x[1] > 0));
+  const cumul2 = EXPS.slice(0, 4).reduce((s, t, i) => s + parExp[i], 0);
+  lecture("l-experience", `${pct(parExp[0], n)} % des ${n} offres acceptent un débutant ; parmi les ${valides} offres qui donnent une durée, ${pct(cumul2, valides)} % demandent moins de 2 ans (« moins d'un an » et « 1 an » compris). Le pourcentage se calcule sur toutes les offres, le pourcentage valide sur celles qui donnent une durée.`);
   // Le champ « formation » est rare : on affiche sur combien d'offres ce graphique est construit,
   // sinon on lit une exigence de diplôme du marché là où il n'y a qu'une poignée d'annonces.
   document.getElementById("sous-formation").textContent =
@@ -58,6 +65,7 @@ function rendre(offres, D) {
   const outils = compter(offres.flatMap(o => o.outils || []), x => x).slice(0, 15);
   zoneSelonBarres("g-outils", outils.length, 30);
   barres("g-outils", outils.map(x => x[0]), outils.map(x => pct(x[1], n)), true, " % des offres");
+  if (outils.length) lecture("l-outils", `${outils[0][0]} est cité par ${outils[0][1]} offres sur ${n} (${pct(outils[0][1], n)} %). Les mots-clés viennent de l'intitulé et de la description ; les offres Adzuna ne donnent que l'intitulé.`);
 
   /* Un employeur qui publie des centaines d'annonces quasi identiques (réseau de franchise,
      agence d'intérim) déforme tous les graphiques par niveau. On le dit, avec son nom et son
@@ -72,6 +80,7 @@ function rendre(offres, D) {
   const comp = compter(offres.flatMap(o => o.competences || []), x => x).slice(0, 12);
   zoneSelonBarres("g-competences", comp.length, 62);
   barres("g-competences", comp.map(x => enLignes(x[0])), comp.map(x => x[1]), true, " offres");
+  if (comp.length) lecture("l-competences", `« ${comp[0][0]} » revient dans ${comp[0][1]} offres sur ${n} ; seules les offres France Travail portent ce codage officiel.`);
 }
 
 Commun.demarrer(rendre);

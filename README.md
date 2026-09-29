@@ -44,6 +44,9 @@ Pour en ajouter, complétez le CSV puis relancez `scripts/resumer.py`.
 - **sans doublon** : même employeur, même intitulé, même département, on garde la plus récente.
 
 Le décompte de ce qui est retiré, et pourquoi, est écrit dans `data/resume.json` (`retires`).
+Les consignes graphiques suivent le TD 1 du cours (data.iae-mod.fr) : trace du nettoyage avant le premier graphique (`trace` dans `data/resume.json`),
+une phrase de lecture sous chaque graphique (ce qu'on voit, sur combien d'offres, à quelle date), tableaux d'effectifs et de fréquences,
+expérience recodée en années, salaire minimum affiché décrit par médiane, moyenne, mode, écart-type, asymétrie et aplatissement face à la loi normale.
 Les pages présentent les graphiques dans un ordre de lecture fixe : camemberts pour les parts,
 colonnes dans l'ordre naturel (expérience, diplôme, salaire, âge), courbe pour le temps, barres classées pour les palmarès.
 

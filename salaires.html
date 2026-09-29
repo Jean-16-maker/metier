@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ce que ça paie — retail, expérience client et direction commerciale internationale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=5">
+<link rel="stylesheet" href="assets/commun.css?v=6">
 </head>
 <body>
 <main>
@@ -16,64 +16,111 @@
   <div id="filtres-ici"></div>
 
   <div class="phrase" id="phrase-salaire" style="margin-top:24px">—</div>
+  <div class="chiffres" id="stats-salaire" style="margin-top:16px"></div>
   <div class="grille" style="margin-top:16px">
-    <div class="carte large"><h3>1. Combien paient les offres ? <small>— nombre d'offres par tranche de salaire brut annuel</small></h3><div class="zone"><canvas id="g-paie-repartition"></canvas></div></div>
-    <div class="carte"><h3>2. Selon le niveau de poste <small>— de la médiane des minima à celle des maxima, du junior au directeur</small></h3><div class="zone"><canvas id="g-paie-niveau"></canvas></div></div>
-    <div class="carte"><h3>3. Selon le type de contrat</h3><div class="zone"><canvas id="g-paie-contrat"></canvas></div></div>
-    <div class="carte"><h3>4. Selon le territoire <small>— Île-de-France ou reste de la France</small></h3><div class="zone"><canvas id="g-paie-idf"></canvas></div></div>
-    <div class="carte large"><h3>5. Selon le métier <small>— du moins au mieux payé, métiers cochés comptant au moins 8 offres</small></h3><div class="zone haute"><canvas id="g-paie-metier"></canvas></div></div>
+    <div class="carte large"><h3>1. Comment se répartissent les salaires ? <small>— salaire brut annuel minimum affiché, part des offres par tranche de 5 000 €, comparée à la loi normale</small></h3><div class="zone"><canvas id="g-paie-repartition"></canvas></div><p class="lecture" id="l-repartition"></p></div>
+    <div class="carte"><h3>2. Tranches de même largeur <small>— 10 000 € chacune</small></h3><div class="zone"><canvas id="g-classes-tranches"></canvas></div><p class="lecture" id="l-tranches"></p></div>
+    <div class="carte"><h3>3. Classes de même effectif <small>— bornées par les quartiles</small></h3><div class="zone"><canvas id="g-classes-quartiles"></canvas></div><p class="lecture" id="l-quartiles"></p></div>
+    <div class="carte large"><h3>4. Les salaires sont-ils dispersés de la même façon selon le métier ? <small>— médiane, quartiles et écart-type du salaire minimum affiché</small></h3><div id="t-dispersion"></div><p class="lecture" id="l-dispersion"></p></div>
+    <div class="carte"><h3>5. Selon le niveau de poste <small>— du junior au directeur</small></h3><div class="zone"><canvas id="g-paie-niveau"></canvas></div><p class="lecture" id="l-niveau"></p></div>
+    <div class="carte"><h3>6. Selon le type de contrat</h3><div class="zone"><canvas id="g-paie-contrat"></canvas></div><p class="lecture" id="l-contrat"></p></div>
+    <div class="carte"><h3>7. Selon le territoire <small>— Île-de-France ou reste de la France</small></h3><div class="zone"><canvas id="g-paie-idf"></canvas></div><p class="lecture" id="l-idf"></p></div>
+    <div class="carte large"><h3>8. Selon le métier <small>— du moins au mieux payé, métiers cochés comptant au moins 8 offres</small></h3><div class="zone haute"><canvas id="g-paie-metier"></canvas></div><p class="lecture" id="l-metier"></p></div>
   </div>
-  <p class="note" style="margin-top:12px">Ce sont les salaires <b>affichés</b> : toutes les annonces retenues en affichent un, mais beaucoup d'annonces du marché n'en donnent pas et ont été écartées. Le vrai marché paie sans doute un peu mieux, surtout en haut de l'échelle. Le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu).</p>
+  <p class="note" style="margin-top:12px">Ce sont les salaires <b>affichés</b> : toutes les annonces retenues en affichent un, mais beaucoup d'annonces du marché n'en donnent pas et ont été écartées. Le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu). Aucun découpage en classes n'est neutre : les tranches de 10 000 € et les quartiles racontent la même variable de deux façons.</p>
 
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=5"></script>
+<script src="assets/commun.js?v=6"></script>
 <script>
 /* ============ Ce que ça paie ============ */
 function rendre(offres, D) {
   const lib = Commun.lib, f = Commun.f;
   const n = offres.length;
   const avecSal = offres.filter(o => o.smin != null);
-
+  const mins = avecSal.map(o => o.smin);            // la variable étudiée : le salaire minimum affiché
   const milieux = avecSal.map(o => o.smax != null ? (o.smin + o.smax) / 2 : o.smin);
   const q1 = quantile(milieux, .25), q3 = quantile(milieux, .75);
   document.getElementById("phrase-salaire").innerHTML = avecSal.length < 5
     ? (avecSal.length ? `Seulement ${avecSal.length} offre(s) de cette sélection affichent un salaire : trop peu pour en tirer quoi que ce soit.` : "Aucune offre de cette sélection n'affiche de salaire.")
     : `Sur les <b>${avecSal.length}</b> offres qui affichent un salaire (${pct(avecSal.length, n)} % de la sélection), la moitié propose entre <b>${euro(q1, 100)}</b> et <b>${euro(q3, 100)}</b> brut par an, soit environ <b>${euro(net(q1), 10)}</b> à <b>${euro(net(q3), 10)}</b> net par mois.`;
+  if (avecSal.length < 5) { document.getElementById("stats-salaire").innerHTML = ""; }
 
-  // 1) répartition : une colonne par tranche de 5 000 €, de la plus basse à la plus haute
-  const PAS = 5000, bas = 20000, haut = 80000;
+  // Statistiques descriptives du salaire minimum affiché
+  const moy = moyenne(mins), med = mediane(mins), et = ecartType(mins), sk = asymetrie(mins), ku = aplatissement(mins);
+  const PAS = 5000, bas = 15000, haut = 80000;
   const tranches = []; for (let x = bas; x < haut; x += PAS) tranches.push(x);
   const cle = m => Math.min(Math.max(Math.floor((m - bas) / PAS), 0), tranches.length - 1);
-  const compte = tranches.map(() => 0); milieux.forEach(m => { compte[cle(m)]++; });
-  colonnes("g-paie-repartition", tranches.map((x, i) => i === 0 ? `< ${(x + PAS) / 1000} k€` : i === tranches.length - 1 ? `≥ ${x / 1000} k€` : `${x / 1000}–${(x + PAS) / 1000} k€`), compte);
+  const compte = tranches.map(() => 0); mins.forEach(m => { compte[cle(m)]++; });
+  const modeI = compte.indexOf(Math.max(...compte));
+  const etiq = tranches.map((x, i) => i === 0 ? `< ${(x + PAS) / 1000} k` : i === tranches.length - 1 ? `≥ ${x / 1000} k` : `${x / 1000}–${(x + PAS) / 1000} k`);
+  if (avecSal.length >= 5) {
+    document.getElementById("stats-salaire").innerHTML = [
+      [euro(med, 100), "médiane : la moitié gagne moins"], [euro(moy, 100), "moyenne : tirée vers le haut par les gros salaires"],
+      [`${etiq[modeI]}€`, "mode : la tranche la plus fréquente"], [euro(et, 100), "écart-type : écart typique à la moyenne"],
+      [nb(sk), "asymétrie : 0 = symétrique, > 0 = queue vers les hauts salaires"], [nb(ku), "aplatissement (en excès) : 0 pour une loi normale"],
+    ].map(([v, l]) => `<div class="chiffre"><b>${v}</b><span>${l}</span></div>`).join("");
+  }
 
-  // 2) par niveau de poste, dans l'ordre assistant → directeur
-  flottantes("g-paie-niveau", NIVEAUX.map(([k, l]) => {
-    const lot = avecSal.filter(o => niv(o) === k);
-    return { label: l, n: lot.length, paire: fourchette(lot), teinte: COUL_NIV[k] };
-  }).filter(x => x.paire && x.n >= 3));
+  // 1) histogramme + loi normale de même moyenne et même écart-type
+  const normale = tranches.map(x => { const c = x + PAS / 2; return et ? Math.round(avecSal.length * PAS * Math.exp(-0.5 * ((c - moy) / et) ** 2) / (et * Math.sqrt(2 * Math.PI)) * 10) / 10 : 0; });
+  dessiner("g-paie-repartition", "bar",
+    { labels: etiq, datasets: [
+      { type: "bar", label: "salaires réels", data: compte, backgroundColor: couleur, borderRadius: 4, order: 2 },
+      { type: "line", label: "loi normale", data: normale, borderColor: "#ff6a00", backgroundColor: "#ff6a00", borderWidth: 2, pointRadius: 0, tension: .35, order: 1 }] },
+    { plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 12, boxHeight: 12 } },
+                 tooltip: { callbacks: { label: c => c.dataset.label === "loi normale" ? `loi normale : ${nb(c.parsed.y)} offres attendues` : `${c.parsed.y} offres` } } },
+      scales: { x: { grid: { display: false }, title: { display: true, text: "salaire brut annuel minimum (€)" } }, y: { beginAtZero: true, title: { display: true, text: "nombre d'offres" } } } });
+  if (avecSal.length >= 5) lecture("l-repartition", `Sur ${avecSal.length} offres : médiane ${euro(med, 100)}, moyenne ${euro(moy, 100)}, écart-type ${euro(et, 100)}. Asymétrie ${nb(sk)} : ${sk > 0.5 ? "longue queue vers les hauts salaires, la distribution ne ressemble pas à une loi normale" : sk < -0.5 ? "queue vers les bas salaires" : "distribution à peu près symétrique"} ; la médiane décrit mieux le salaire typique que la moyenne.`);
 
-  // 5) par métier (au moins 8 offres avec salaire), du moins au mieux payé
+  // 2) tranches de 10 000 € et 3) classes de même effectif (quartiles)
+  const T10 = [["Moins de 20 000", v => v < 20000], ["20 000 à 30 000", v => v >= 20000 && v < 30000], ["30 000 à 40 000", v => v >= 30000 && v < 40000], ["40 000 à 50 000", v => v >= 40000 && v < 50000], ["50 000 et plus", v => v >= 50000]];
+  const c10 = T10.map(([, t]) => mins.filter(t).length);
+  colonnes("g-classes-tranches", T10.map(x => x[0]), c10);
+  if (mins.length) { const iMax = c10.indexOf(Math.max(...c10)); lecture("l-tranches", `${c10[iMax]} offres sur ${mins.length} (${pct(c10[iMax], mins.length)} %) tombent dans « ${T10[iMax][0]} » : des classes de même largeur peuvent être très inégalement remplies.`); }
+  const qa = quantile(mins, .25), qb = quantile(mins, .5), qc = quantile(mins, .75);
+  if (mins.length >= 8) {
+    const Q = [[`Moins de ${Math.round(qa).toLocaleString("fr-FR")}`, v => v < qa], [`${Math.round(qa).toLocaleString("fr-FR")} à ${Math.round(qb).toLocaleString("fr-FR")}`, v => v >= qa && v < qb], [`${Math.round(qb).toLocaleString("fr-FR")} à ${Math.round(qc).toLocaleString("fr-FR")}`, v => v >= qb && v < qc], [`${Math.round(qc).toLocaleString("fr-FR")} et plus`, v => v >= qc]];
+    colonnes("g-classes-quartiles", Q.map(x => x[0]), Q.map(([, t]) => mins.filter(t).length), "#5f9bf5");
+    lecture("l-quartiles", `Quatre classes de même effectif (environ ${Math.round(mins.length / 4)} offres chacune) : les bornes ${euro(qa, 100)}, ${euro(qb, 100)} et ${euro(qc, 100)} sont les quartiles du salaire minimum affiché.`);
+  }
+
+  // 4) dispersion par métier : médiane, quartiles, écart-type
+  const lignes = [...f.metiers].map(code => ({ code, lot: mins_de(code) })).filter(x => x.lot.length >= 8).sort((a, b) => mediane(a.lot) - mediane(b.lot));
+  function mins_de(code) { return avecSal.filter(o => o.rome === code).map(o => o.smin); }
+  document.getElementById("t-dispersion").innerHTML = lignes.length
+    ? `<table class="freq"><thead><tr><th>Métier</th><th>Offres</th><th>Médiane</th><th>1er quartile</th><th>3e quartile</th><th>Écart-type</th></tr></thead><tbody>${lignes.map(x =>
+        `<tr><td>${(lib[x.code] && lib[x.code].libelle) || x.code}</td><td>${x.lot.length}</td><td>${euro(mediane(x.lot), 100)}</td><td>${euro(quantile(x.lot, .25), 100)}</td><td>${euro(quantile(x.lot, .75), 100)}</td><td>${euro(ecartType(x.lot), 100)}</td></tr>`).join("")}</tbody></table>`
+    : `<p class="note">Aucun métier coché n'a au moins 8 offres avec salaire.</p>`;
+  if (lignes.length > 1) { const dispo = [...lignes].sort((a, b) => ecartType(b.lot) - ecartType(a.lot)); lecture("l-dispersion", `Le métier aux salaires les plus dispersés est « ${(lib[dispo[0].code] || {}).libelle || dispo[0].code} » (écart-type ${euro(ecartType(dispo[0].lot), 100)}, sur ${dispo[0].lot.length} offres) ; le plus resserré est « ${(lib[dispo[dispo.length - 1].code] || {}).libelle || dispo[dispo.length - 1].code} » (${euro(ecartType(dispo[dispo.length - 1].lot), 100)}).`); }
+
+  // 5) par niveau de poste, dans l'ordre assistant → directeur
+  const parNiveauSal = NIVEAUX.map(([k, l]) => { const lot = avecSal.filter(o => niv(o) === k); return { label: l, n: lot.length, paire: fourchette(lot), teinte: COUL_NIV[k] }; }).filter(x => x.paire && x.n >= 3);
+  flottantes("g-paie-niveau", parNiveauSal);
+  if (parNiveauSal.length) lecture("l-niveau", `Barre = milieu de la fourchette médiane (minimum et maximum affichés), sur ${parNiveauSal.reduce((s, x) => s + x.n, 0)} offres ; niveaux de moins de 3 offres non représentés.`);
+
+  // 8) par métier (au moins 8 offres avec salaire), du moins au mieux payé
   const parMetierSal = [...f.metiers].map(code => {
     const lot = avecSal.filter(o => o.rome === code);
     return { label: enLignes((lib[code] && lib[code].libelle) || code, 30), n: lot.length, paire: fourchette(lot) };
   }).filter(x => x.paire && x.n >= 8).sort((a, b) => a.paire[0] - b.paire[0]);
   zoneSelonBarres("g-paie-metier", parMetierSal.length, 46);
   flottantes("g-paie-metier", parMetierSal);
+  if (parMetierSal.length) lecture("l-metier", `${parMetierSal.length} métiers comptent au moins 8 offres avec salaire ; du moins au mieux payé.`);
 
-  // 3) par type de contrat (ordre CDI, CDD, intérim, alternance, freelance) et 4) territoire
-  flottantes("g-paie-contrat", CONTRATS.map(([k, l]) => {
-    const lot = avecSal.filter(o => familleContrat(o) === k);
-    return { label: l, n: lot.length, paire: fourchette(lot) };
-  }).filter(x => x.paire && x.n >= 3));
-  // Deux territoires qui ne se recouvrent pas : l'Île-de-France et le reste de la France
-  // (les offres sans département, « France » ou « poste itinérant », n'entrent ni dans l'un ni dans l'autre).
-  flottantes("g-paie-idf", [
+  // 6) par type de contrat (ordre CDI, CDD, intérim, alternance, freelance)
+  const parContrat = CONTRATS.map(([k, l]) => { const lot = avecSal.filter(o => familleContrat(o) === k); return { label: l, n: lot.length, paire: fourchette(lot), teinte: COUL_CONTRAT[k] }; }).filter(x => x.paire && x.n >= 3);
+  flottantes("g-paie-contrat", parContrat);
+  if (parContrat.length) lecture("l-contrat", `Contrats de moins de 3 offres avec salaire non représentés ; ${parContrat.map(x => `${x.label} ${x.n}`).join(", ")} offres.`);
+
+  // 7) territoire : Île-de-France ou reste de la France (les offres sans département sont exclues des deux)
+  const parTerr = [
     { label: "Île-de-France", lot: avecSal.filter(o => IDF.has(o.dep)) },
     { label: "Reste de la France", lot: avecSal.filter(o => o.dep && !IDF.has(o.dep)) },
-  ].map(x => ({ label: x.label, n: x.lot.length, paire: fourchette(x.lot) })).filter(x => x.paire && x.n >= 3));
+  ].map(x => ({ label: x.label, n: x.lot.length, paire: fourchette(x.lot) })).filter(x => x.paire && x.n >= 3);
+  flottantes("g-paie-idf", parTerr);
+  if (parTerr.length) lecture("l-idf", parTerr.map(x => `${x.label} : ${x.n} offres`).join(" ; ") + " ; les offres sans département ne sont dans aucun des deux groupes.");
 }
 
 Commun.demarrer(rendre);

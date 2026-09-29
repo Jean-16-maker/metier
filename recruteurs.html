@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Qui recrute — retail, expérience client et direction commerciale internationale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=5">
+<link rel="stylesheet" href="assets/commun.css?v=6">
 </head>
 <body>
 <main>
@@ -16,9 +16,9 @@
   <div id="filtres-ici"></div>
 
   <div class="grille" style="margin-top:24px">
-    <div class="carte"><h3>1. Entreprises qui publient le plus <small>— du plus au moins</small></h3><div class="zone"><canvas id="g-entreprises"></canvas></div></div>
-    <div class="carte"><h3>2. Secteurs d'activité <small>— part des offres, quand l'annonce le précise</small></h3><div class="zone ronde"><canvas id="g-secteurs"></canvas></div></div>
-    <div class="carte large"><h3>3. Qui recrute des débutants ? <small id="sous-juniors">— les employeurs qui publient le plus d'offres ouvertes à quelqu'un sans expérience</small></h3><div class="zone haute"><canvas id="g-juniors"></canvas></div>
+    <div class="carte"><h3>1. Entreprises qui publient le plus <small>— du plus au moins</small></h3><div class="zone"><canvas id="g-entreprises"></canvas></div><p class="lecture" id="l-entreprises"></p></div>
+    <div class="carte"><h3>2. Secteurs d'activité <small>— part des offres, quand l'annonce le précise</small></h3><div class="zone ronde"><canvas id="g-secteurs"></canvas></div><p class="lecture" id="l-secteurs"></p></div>
+    <div class="carte large"><h3>3. Qui recrute des débutants ? <small id="sous-juniors">— les employeurs qui publient le plus d'offres ouvertes à quelqu'un sans expérience</small></h3><div class="zone haute"><canvas id="g-juniors"></canvas></div><p class="lecture" id="l-juniors"></p>
       <p class="note">Une offre est comptée ici si elle est en alternance, ou si l'annonce indique « débutant accepté ». Ce sont les premiers noms à qui écrire quand on sort de formation — en gardant en tête que certains de ces publieurs sont des agences qui recrutent pour le compte d'autres entreprises (les écoles sont écartées).</p></div>
   </div>
 
@@ -29,7 +29,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=5"></script>
+<script src="assets/commun.js?v=6"></script>
 <script>
 /* ============ Qui recrute ============ */
 function rendre(offres, D) {
@@ -39,7 +39,10 @@ function rendre(offres, D) {
   const ent = compter(offres, o => o.entreprise).slice(0, 10);
   zoneSelonBarres("g-entreprises", ent.length, 34);
   barres("g-entreprises", ent.map(x => enLignes(x[0], 26)), ent.map(x => x[1]), true, " offres");
+  if (ent.length) lecture("l-entreprises", `${ent[0][0]} publie le plus d'offres : ${ent[0][1]} sur ${n} (${pct(ent[0][1], n)} %). ${new Set(offres.map(o => o.entreprise)).size} employeurs différents au total.`);
   const sec = compter(offres, o => secteurCourt(o.secteur));
+  const avecSecteur = offres.filter(o => o.secteur).length;
+  if (sec.length) lecture("l-secteurs", `Sur les ${avecSecteur} offres qui précisent leur secteur (${pct(avecSecteur, n)} % de ${n}), « ${sec[0][0]} » arrive en tête avec ${sec[0][1]} offres (${pct(sec[0][1], avecSecteur)} %). Au-delà de 7 secteurs, le reste est regroupé en « Autres ».`);
   camembert("g-secteurs", sec.map(x => x[0]), sec.map(x => x[1]), null, 7);
   /* Qui recrute des débutants : les employeurs nommés, classés par nombre d'offres ouvertes
      à quelqu'un sans expérience (alternance, ou « débutant accepté »). Deux barres distinctes :
@@ -62,6 +65,7 @@ function rendre(offres, D) {
                  tooltip: { callbacks: { label: c => `${c.dataset.label} : ${c.parsed.x} offre${c.parsed.x > 1 ? "s" : ""}` } } },
       scales: { x: { stacked: true, beginAtZero: true, title: { display: true, text: "nombre d'offres" } },
                 y: { stacked: true, grid: { display: true } } } });
+  if (topJuniors.length) lecture("l-juniors", `${topJuniors[0][0]} est l'employeur qui compte le plus d'offres ouvertes aux débutants : ${topJuniors[0][1]} sur ${ouvertes.length}.`);
   document.getElementById("sous-juniors").textContent =
     `— ${juniors.length} offres de votre sélection sont ouvertes à quelqu'un sans expérience ; ${ouvertes.length} nomment leur employeur, voici ceux qui en publient le plus`;
 

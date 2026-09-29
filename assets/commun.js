@@ -23,6 +23,32 @@ function quantile(a, q) {
   const p = (s.length - 1) * q, bas = Math.floor(p), haut = Math.ceil(p);
   return bas === haut ? s[bas] : s[bas] + (s[haut] - s[bas]) * (p - bas);
 }
+
+/* Statistiques descriptives (écart-type de la population ; aplatissement « en excès » : 0 pour une loi normale). */
+const moyenne = a => { const v = a.filter(x => x != null && isFinite(x)); return v.length ? v.reduce((x, y) => x + y, 0) / v.length : null; };
+function ecartType(a) { const v = a.filter(x => x != null && isFinite(x)), m = moyenne(v); return v.length ? Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / v.length) : null; }
+function moment(a, k) { const v = a.filter(x => x != null && isFinite(x)), m = moyenne(v); return v.length ? v.reduce((s, x) => s + (x - m) ** k, 0) / v.length : null; }
+const asymetrie = a => { const m2 = moment(a, 2); return m2 ? moment(a, 3) / Math.pow(m2, 1.5) : null; };
+const aplatissement = a => { const m2 = moment(a, 2); return m2 ? moment(a, 4) / (m2 * m2) - 3 : null; };
+const nb = v => v == null || !isFinite(v) ? "—" : (Math.round(v * 100) / 100).toLocaleString("fr-FR");
+/* La phrase sous un graphique : ce qu'on voit, sur combien d'offres, à quelle date (consigne du TD 1). */
+function lecture(id, phrase) {
+  const e = document.getElementById(id);
+  if (e) e.innerHTML = `${phrase} <span class="src">Données : offres retenues au ${dateFr(D.date)} (France Travail, Adzuna).</span>`;
+}
+/* Tableau d'effectifs et de fréquences. lignes : [libellé, effectif] ; total : base du pourcentage ;
+   valide : nombre de lignes renseignées (pour le % valide et le cumulé), ou null pour une variable nominale. */
+function tableauFrequences(id, lignes, total, valide = null, manquantes = []) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  let cumul = 0;
+  const corps = lignes.map(([l, n]) => { cumul += n;
+    return `<tr><td>${l}</td><td>${n}</td><td>${nb(100 * n / total)} %</td>${valide ? `<td>${nb(100 * n / valide)} %</td><td>${nb(100 * cumul / valide)} %</td>` : ""}</tr>`; }).join("");
+  const manque = manquantes.map(([l, n]) => `<tr class="manquant"><td>${l}</td><td>${n}</td><td>${nb(100 * n / total)} %</td>${valide ? "<td>manquant</td><td></td>" : ""}</tr>`).join("");
+  e.innerHTML = `<table class="freq"><thead><tr><th></th><th>Effectif</th><th>Pourcentage</th>${valide ? "<th>% valide</th><th>% cumulé</th>" : ""}</tr></thead><tbody>${corps}${manque}
+    <tr class="total"><td>Total</td><td>${total}</td><td>100 %</td>${valide ? "<td>100 %</td><td></td>" : ""}</tr></tbody></table>`;
+}
+
 const compter = (liste, cle) => { const c = new Map(); for (const x of liste) { const k = cle(x); if (k == null || k === "") continue; c.set(k, (c.get(k) || 0) + 1); } return [...c].sort((a, b) => b[1] - a[1]); };
 const court = (s, n) => !s ? "—" : (s.length > n ? s.slice(0, n - 1) + "…" : s);
 /* Le libellé de salaire de France Travail, rendu lisible : « Mensuel de 2500.0 Euros à
@@ -75,7 +101,7 @@ const PALETTE = ["#0a5cff", "#ff6a00", "#1a9e6e", "#8e5cf7", "#e5484d", "#f5b301
 const COUL_EXP = ["#a7c9ff", "#7fb0fa", "#5f9bf5", "#2a6ad4", "#123a7a", "#b4b4bc"];
 const AURA = new Set(["01", "03", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74"]);
 const IDF = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
-const EXPS = ["Débutant accepté", "Moins d'un an", "1 à 2 ans", "3 à 4 ans", "5 ans et plus", "Non précisé"];
+const EXPS = ["Débutant accepté", "Moins d'un an", "1 an", "2 ans", "3 ans", "4 ans", "5 ans", "6 ans et plus", "Exigée, sans durée"];
 
 Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
 Chart.defaults.plugins.legend.display = false;
@@ -107,14 +133,13 @@ const libContratOffre = o => (CONTRATS.find(x => x[0] === familleContrat(o)) || 
    pour que les deux pages ne puissent pas se contredire. */
 const debutantAccepte = o => o.exp_exige === "D" || o.exp_ans === 0;
 
-/* Tranche d'expérience demandée. */
+/* Expérience demandée, recodée en années et rangée dans l'ordre ; « exigée sans durée » est mise à part. */
 function trancheExp(o) {
   if (o.exp_exige === "D" || o.exp_ans === 0) return "Débutant accepté";
-  if (o.exp_ans == null) return "Non précisé";
+  if (o.exp_ans == null) return o.exp_exige === "E" ? "Exigée, sans durée" : null;
   if (o.exp_ans < 1) return "Moins d'un an";
-  if (o.exp_ans < 3) return "1 à 2 ans";
-  if (o.exp_ans < 5) return "3 à 4 ans";
-  return "5 ans et plus";
+  if (o.exp_ans >= 6) return "6 ans et plus";
+  return `${Math.round(o.exp_ans)} an${Math.round(o.exp_ans) > 1 ? "s" : ""}`;
 }
 
 /* Secteurs : libellés officiels très longs, on les rend lisibles. */
@@ -182,7 +207,7 @@ function camembert(id, etiquettes, valeurs, couleurs, max = 7) {
     { labels: lab.map(l => [].concat(l).join(" ")), datasets: [{ data: val, backgroundColor: col || lab.map((_, i) => PALETTE[i % 8]), borderColor: "#fff", borderWidth: 2 }] },
     { cutout: "48%",
       plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 12, boxHeight: 12, padding: 8, font: { size: 11 },
-                   generateLabels: ch => ch.data.labels.map((l, i) => ({ text: `${l} — ${pct(val[i], total)} %`, fillStyle: ch.data.datasets[0].backgroundColor[i], strokeStyle: "#fff", index: i })) } },
+                   generateLabels: ch => ch.data.labels.map((l, i) => ({ text: `${l} — ${val[i]} (${pct(val[i], total)} %)`, fillStyle: ch.data.datasets[0].backgroundColor[i], strokeStyle: "#fff", index: i })) } },
                  tooltip: { callbacks: { label: c => `${c.label} : ${c.parsed} offre${c.parsed > 1 ? "s" : ""} (${pct(c.parsed, total)} %)` } } } });
 }
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Le marché bouge — retail, expérience client et direction commerciale internationale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=5">
+<link rel="stylesheet" href="assets/commun.css?v=6">
 </head>
 <body>
 <main>
@@ -17,9 +17,9 @@
 
   <div class="grille" style="margin-top:24px">
     <div class="carte large"><h3>1. Combien d'offres sont publiées chaque semaine ? <small>— courbe des deux derniers mois</small></h3><div class="zone"><canvas id="g-semaines"></canvas></div>
-      <p class="note" id="note-serie"></p></div>
+      <p class="lecture" id="note-serie"></p></div>
     <div class="carte"><h3>2. Fraîcheur des annonces <small>— âge des offres, de la plus récente à la plus ancienne</small></h3><div class="zone"><canvas id="g-fraicheur"></canvas></div>
-      <p class="note">Seules les annonces de moins de deux mois sont gardées : candidatez d'abord aux plus fraîches.</p></div>
+      <p class="lecture" id="l-fraicheur"></p></div>
   </div>
 
   <h2 id="limites">Ce que ces chiffres n'autorisent pas à conclure</h2>
@@ -36,7 +36,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=5"></script>
+<script src="assets/commun.js?v=6"></script>
 <script>
 /* ============ Le marché bouge ============ */
 function rendre(offres, D) {
@@ -50,12 +50,15 @@ function rendre(offres, D) {
     for (let t = Date.parse(lundi(dates[0])); t <= Date.parse(lundi(dates[dates.length - 1])); t += 7 * 86400000) parSem.set(new Date(t).toISOString().slice(0, 10), 0);
     dates.forEach(d => { const k = lundi(d); parSem.set(k, (parSem.get(k) || 0) + 1); });
     courbe("g-semaines", [...parSem.keys()].map(k => "sem. du " + dateFr(k, true)), [...parSem.values()], "offres publiées");
-    document.getElementById("note-serie").textContent = `${dates.length} offres publiées entre le ${dateFr(dates[0])} et le ${dateFr(dates[dates.length - 1])}. La dernière semaine peut être incomplète.`;
+    const vals = [...parSem.values()], pic = vals.indexOf(Math.max(...vals));
+    lecture("note-serie", `${dates.length} offres publiées entre le ${dateFr(dates[0])} et le ${dateFr(dates[dates.length - 1])} ; pic la semaine du ${dateFr([...parSem.keys()][pic])} avec ${vals[pic]} offres. La dernière semaine peut être incomplète, et les offres Adzuna sont datées approximativement.`);
   }
 
   const FRAIS = [["Moins de 7 jours", j => j < 7], ["7 à 14 jours", j => j >= 7 && j < 14], ["14 à 30 jours", j => j >= 14 && j < 30], ["30 à 60 jours", j => j >= 30]];
   const ages = offres.map(age).filter(j => j != null && j >= 0);
-  colonnes("g-fraicheur", FRAIS.map(x => x[0]), FRAIS.map(([, test]) => ages.filter(test).length));
+  const parAge = FRAIS.map(([, test]) => ages.filter(test).length);
+  colonnes("g-fraicheur", FRAIS.map(x => x[0]), parAge);
+  lecture("l-fraicheur", `${parAge[0]} offres sur ${ages.length} (${pct(parAge[0], ages.length)} %) ont moins de 7 jours ; seules les annonces de moins de deux mois sont gardées. Candidatez d'abord aux plus fraîches.`);
 }
 
 Commun.demarrer(rendre);
