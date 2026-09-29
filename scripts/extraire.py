@@ -74,7 +74,8 @@ CHAMPS_VOLATILS = {"dateActualisation"}
 
 
 def obtenir_token():
-    cid, secret = os.getenv("FT_CLIENT_ID"), os.getenv("FT_CLIENT_SECRET")
+    # strip() : un espace ou un retour à la ligne copié avec le secret suffit à faire refuser la connexion.
+    cid, secret = (os.getenv("FT_CLIENT_ID") or "").strip(), (os.getenv("FT_CLIENT_SECRET") or "").strip()
     if not cid or not secret or cid.startswith("PAR_votre"):
         sys.exit("Identifiants absents : copiez .env.example en .env et remplissez-le.")
     r = requests.post(TOKEN_URL, data={
@@ -83,7 +84,19 @@ def obtenir_token():
         "client_secret": secret,
         "scope": "api_offresdemploiv2 o2dsoffre",
     }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=30)
-    r.raise_for_status()
+    if r.status_code != 200:
+        # La réponse de France Travail dit pourquoi (jamais les identifiants eux-mêmes).
+        try:
+            e = r.json()
+        except ValueError:
+            e = {}
+        raison = f"{e.get('error')} — {e.get('error_description') or ''}" if e else r.text[:300]
+        conseil = {
+            "invalid_client": "identifiant ou secret refusé : vérifiez FT_CLIENT_ID et FT_CLIENT_SECRET "
+                              "(pas inversés, copiés en entier, sans espace).",
+            "invalid_scope": "l'application francetravail.io n'est pas abonnée à l'API « Offres d'emploi v2 ».",
+        }.get(e.get("error"), "vérifiez l'application et ses identifiants sur francetravail.io.")
+        sys.exit(f"Connexion à France Travail refusée ({r.status_code}) : {raison}\n→ {conseil}")
     return r.json()["access_token"]
 
 
