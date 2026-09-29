@@ -96,7 +96,10 @@ def obtenir_token():
                               "(pas inversés, copiés en entier, sans espace).",
             "invalid_scope": "l'application francetravail.io n'est pas abonnée à l'API « Offres d'emploi v2 ».",
         }.get(e.get("error"), "vérifiez l'application et ses identifiants sur francetravail.io.")
-        sys.exit(f"Connexion à France Travail refusée ({r.status_code}) : {raison}\n→ {conseil}")
+        message = f"Connexion à France Travail refusée ({r.status_code}) : {raison} → {conseil}"
+        if os.getenv("GITHUB_ACTIONS"):              # annotation visible sur la page du run
+            print(f"::error title=Token France Travail::{message}")
+        sys.exit(message)
     return r.json()["access_token"]
 
 
