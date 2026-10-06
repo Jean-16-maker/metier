@@ -34,7 +34,7 @@ const nb = v => v == null || !isFinite(v) ? "—" : (Math.round(v * 100) / 100).
 /* La phrase sous un graphique : ce qu'on voit, sur combien d'offres, à quelle date (consigne du TD 1). */
 function lecture(id, phrase) {
   const e = document.getElementById(id);
-  if (e) e.innerHTML = `${phrase} <span class="src">Données : offres retenues au ${dateFr(D.date)} (France Travail, Adzuna, Welcome to the Jungle).</span>`;
+  if (e) e.innerHTML = `${phrase} <span class="src">Données : offres retenues au ${dateFr(D.date)} (${D.source.replace("France Travail — API Offres d'emploi v2, complété par", "France Travail,")}).</span>`;
 }
 /* Tableau d'effectifs et de fréquences. lignes : [libellé, effectif] ; total : base du pourcentage ;
    valide : nombre de lignes renseignées (pour le % valide et le cumulé), ou null pour une variable nominale. */
@@ -397,7 +397,7 @@ const Commun = {
 
       const sous = document.getElementById("sous");
       if (sous) sous.innerHTML =
-        `${d.source} · ${d.requete} · extraction du <b>${dateFr(d.date)}</b> · ${d.offres.length} offres retenues (dont ${d.offres.filter(o => o.source === 'Adzuna').length} d'Adzuna et ${d.offres.filter(o => o.source === 'Welcome to the Jungle').length} de Welcome to the Jungle), ${d.versions_conservees} versions d'annonces conservées`;
+        `${d.source} · ${d.requete} · extraction du <b>${dateFr(d.date)}</b> · ${d.offres.length} offres retenues (dont ${[...new Set(d.offres.map(o => o.source))].filter(s => s !== 'France Travail').map(s => `${d.offres.filter(o => o.source === s).length} ${/^[AEIOUÉH]/i.test(s) && s !== 'HelloWork' ? "d'" : 'de '}${s}`).join(', ')}), ${d.versions_conservees} versions d'annonces conservées`;
 
       let memo = null;
       try { memo = JSON.parse(localStorage.getItem("metiers-filtres")); } catch (e) {}

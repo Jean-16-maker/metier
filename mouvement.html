@@ -23,8 +23,8 @@
   </div>
 
   <h2 id="limites">Ce que ces chiffres n'autorisent pas à conclure</h2>
-  <p class="note">Canaux : France Travail, complété par Adzuna et Welcome to the Jungle ; ils n'hébergent pas toutes les offres cadres (APEC, LinkedIn, Welcome to the Jungle en publient d'autres).
-  Les offres de Welcome to the Jungle (relevées à la main depuis un compte connecté, avec date, contrat et salaire exacts) et d'Adzuna sont relevées à la main (une recherche par métier, 30 derniers jours) : leur date est posée au milieu de cette fenêtre et un contrat non affiché est supposé CDI. Ne sont gardées que les annonces de moins de deux mois, avec un nom d'employeur et un salaire lisible, hors écoles et organismes de formation, sans doublon (même employeur, même intitulé, même département) : les chiffres décrivent les annonces les plus transparentes, pas tout le marché. Le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu).
+  <p class="note">Canaux : France Travail, complété par Adzuna, Welcome to the Jungle, Indeed et HelloWork ; ils n'hébergent pas toutes les offres cadres (APEC et LinkedIn en publient d'autres).
+  Les offres de Welcome to the Jungle (compte connecté) et de HelloWork sont relevées à la main avec leur date, leur contrat et leur salaire ; celles d'Adzuna et d'Indeed aussi (une recherche par métier, 30 derniers jours, la première page seulement pour Indeed), mais leur date est posée au milieu de cette fenêtre et un contrat non affiché est supposé CDI. Ne sont gardées que les annonces de moins de deux mois, avec un nom d'employeur et un salaire lisible, hors écoles et organismes de formation, sans doublon (même employeur, même intitulé, même département) : les chiffres décrivent les annonces les plus transparentes, pas tout le marché. Le net mensuel est une estimation (brut × 0,78 / 12, avant impôt sur le revenu).
   Le niveau de poste (assistant·e, chargé·e, responsable, directeur·rice) est déduit de l'intitulé de l'annonce : c'est une approximation, un « chef de projet » n'encadre pas toujours.
   La formation et la qualification ne sont renseignées que par une minorité d'annonces : les pourcentages qui s'y rapportent portent sur ce petit sous-ensemble, pas sur tout le marché.
   Les agences d'intérim et de recrutement sont surreprésentées parmi les employeurs et les secteurs : elles publient beaucoup, parfois la même offre plusieurs fois.
@@ -36,7 +36,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=7"></script>
+<script src="assets/commun.js?v=8"></script>
 <script>
 /* ============ Le marché bouge ============ */
 function rendre(offres, D) {
@@ -51,7 +51,7 @@ function rendre(offres, D) {
     dates.forEach(d => { const k = lundi(d); parSem.set(k, (parSem.get(k) || 0) + 1); });
     courbe("g-semaines", [...parSem.keys()].map(k => "sem. du " + dateFr(k, true)), [...parSem.values()], "offres publiées");
     const vals = [...parSem.values()], pic = vals.indexOf(Math.max(...vals));
-    lecture("note-serie", `${dates.length} offres publiées entre le ${dateFr(dates[0])} et le ${dateFr(dates[dates.length - 1])} ; pic la semaine du ${dateFr([...parSem.keys()][pic])} avec ${vals[pic]} offres. La dernière semaine peut être incomplète, et les offres Adzuna sont datées approximativement.`);
+    lecture("note-serie", `${dates.length} offres publiées entre le ${dateFr(dates[0])} et le ${dateFr(dates[dates.length - 1])} ; pic la semaine du ${dateFr([...parSem.keys()][pic])} avec ${vals[pic]} offres. La dernière semaine peut être incomplète, et les offres Adzuna et Indeed sont datées approximativement.`);
   }
 
   const FRAIS = [["Moins de 7 jours", j => j < 7], ["7 à 14 jours", j => j >= 7 && j < 14], ["14 à 30 jours", j => j >= 14 && j < 30], ["30 à 60 jours", j => j >= 30]];

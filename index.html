@@ -60,7 +60,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=7"></script>
+<script src="assets/commun.js?v=8"></script>
 <script>
 /* ============ Accueil : chiffres, carte, départements, contrats ============ */
 let carte, calque;
@@ -132,7 +132,7 @@ function rendre(offres, D) {
   if (parMetier.length) lecture("l-metiers", `${(lib[parMetier[0][0]] || {}).libelle || parMetier[0][0]} est le métier le plus représenté : ${parMetier[0][1]} offres sur ${n} (${pct(parMetier[0][1], n)} %).`);
   if (niveauxPresents.length) { const top = [...niveauxPresents].sort((a, b) => b[2] - a[2])[0]; lecture("l-niveaux", `Niveau le plus fréquent : ${top[1]}, ${top[2]} offres sur ${n} (${pct(top[2], n)} %) ; niveau déduit de l'intitulé.`); }
   tableauFrequences("t-contrats", contrats.map(x => [x[1], x[2]]).sort((a, b) => b[1] - a[1]), n);
-  if (contrats.length) { const top = [...contrats].sort((a, b) => b[2] - a[2])[0]; lecture("l-contrats", `${top[1]} : ${top[2]} offres sur ${n} (${pct(top[2], n)} %). Un contrat non précisé par Adzuna est supposé CDI.`); }
+  if (contrats.length) { const top = [...contrats].sort((a, b) => b[2] - a[2])[0]; lecture("l-contrats", `${top[1]} : ${top[2]} offres sur ${n} (${pct(top[2], n)} %). Un contrat non précisé (Adzuna, parfois Indeed) est supposé CDI.`); }
   if (deps.length) lecture("l-departements", `Le département ${deps[0][0]} compte le plus d'offres : ${deps[0][1]} sur ${n} (${pct(deps[0][1], n)} %) ; les offres sans département ne sont pas comptées.`);
 
   /* ---- Le chiffre-clé de chaque page ---- */

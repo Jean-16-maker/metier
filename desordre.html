@@ -35,7 +35,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=7"></script>
+<script src="assets/commun.js?v=8"></script>
 <script>
 /* ============ Le désordre des données (TD 1 : « le désordre de vos données ») ============ */
 const UNITES = [["annuel", "Annuel"], ["mensuel", "Mensuel"], ["horaire", "Horaire"], ["texte", "Texte sans montant"], ["aucun", "Aucun salaire"]];
@@ -75,7 +75,7 @@ function rendre(offres, D) {
   const P = [["À l'adresse de l'offre", offres.filter(o => o.prec === "offre").length], ["Au centre de la commune", offres.filter(o => o.prec === "commune").length],
              ["Au centre du département", offres.filter(o => o.prec === "departement").length], ["Aucune position", offres.filter(o => o.lat == null).length]];
   camembert("g-positions", P.map(x => x[0]), P.map(x => x[1]), ["#2a6ad4", "#5f9bf5", "#a7c9ff", "#b4b4bc"]);
-  lecture("l-positions", `Sur ${offres.length} offres sélectionnées : ${P[0][1]} sont placées à leur adresse, ${P[1][1]} au centre de leur commune, ${P[2][1]} au centre de leur département et ${P[3][1]} n'ont aucune position. Sur une carte, elles s'empilent au même point ou disparaissent. Et la base ne voit que ses sources : France Travail, Adzuna et Welcome to the Jungle.`);
+  lecture("l-positions", `Sur ${offres.length} offres sélectionnées : ${P[0][1]} sont placées à leur adresse, ${P[1][1]} au centre de leur commune, ${P[2][1]} au centre de leur département et ${P[3][1]} n'ont aucune position. Sur une carte, elles s'empilent au même point ou disparaissent. Et la base ne voit que ses sources : France Travail, Adzuna, Welcome to the Jungle, Indeed et HelloWork.`);
 
   /* 6. La trace : décrire le désordre est un résultat */
   const trace = D.trace || [];

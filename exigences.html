@@ -27,7 +27,7 @@
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=7"></script>
+<script src="assets/commun.js?v=8"></script>
 <script>
 /* ============ Ce qu'on vous demande ============ */
 function rendre(offres, D) {
@@ -65,7 +65,7 @@ function rendre(offres, D) {
   const outils = compter(offres.flatMap(o => o.outils || []), x => x).slice(0, 15);
   zoneSelonBarres("g-outils", outils.length, 30);
   barres("g-outils", outils.map(x => x[0]), outils.map(x => pct(x[1], n)), true, " % des offres");
-  if (outils.length) lecture("l-outils", `${outils[0][0]} est cité par ${outils[0][1]} offres sur ${n} (${pct(outils[0][1], n)} %). Les mots-clés viennent de l'intitulé et de la description ; les offres Adzuna ne donnent que l'intitulé.`);
+  if (outils.length) lecture("l-outils", `${outils[0][0]} est cité par ${outils[0][1]} offres sur ${n} (${pct(outils[0][1], n)} %). Les mots-clés viennent de l'intitulé et de la description ; les offres relevées à la main (Adzuna, Welcome to the Jungle, Indeed, HelloWork) ne donnent que l'intitulé.`);
 
   /* Un employeur qui publie des centaines d'annonces quasi identiques (réseau de franchise,
      agence d'intérim) déforme tous les graphiques par niveau. On le dit, avec son nom et son

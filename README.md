@@ -33,6 +33,23 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 CDI, débutant) : lien de l'offre, métier ROME rattaché, intitulé, employeur, ville, salaire affiché, contrat, date de publication exacte.
 Seules les offres qui affichent un salaire et ressemblent aux métiers suivis sont gardées (une dizaine de pages de résultats parcourues).
 
+## Offres d'Indeed et de HelloWork
+
+Ni l'un ni l'autre n'ouvre d'API d'offres : elles sont relevées dans le navigateur le 6 octobre 2026, une recherche par
+métier (directeur et responsable de magasin, responsable de boutique, directeur régional, area manager, customer success
+manager, responsable service client, key account manager, responsable grands comptes, directeur commercial, business
+developer, ingénieur d'affaires), offres du dernier mois avec un salaire et un employeur.
+
+- `data/externes/hellowork.csv` : cinq pages par recherche, avec date (« il y a N jours » ramené à une date), contrat et salaire.
+  Les intitulés hors sujet (experts et gestionnaires de service client, postes qualité, RH, exploitation…) sont écartés.
+- `data/externes/indeed.csv` : la première page seulement (Indeed demande une connexion dès la page 2), à Paris, Lyon,
+  Marseille, Lille, Bordeaux, Toulouse et Nantes ; le relevé s'arrête au premier contrôle anti-robot. Pas de date sur la
+  liste : elle est posée au milieu de la fenêtre, comme pour Adzuna. Quatre cartes « pièges » (identifiant factice, copie
+  d'une vraie offre) ont été retirées.
+
+Le salaire est réécrit en brut annuel (« 2 400 € / mois » × 12, « 14 € / heure » × 1 820 h). Le doublon se cherche aussi
+d'une source à l'autre (même employeur, même intitulé, même département).
+
 ## Offres d'Adzuna
 
 `data/externes/adzuna.csv` contient les offres Adzuna relevées dans le navigateur (recherche par métier, filtre « 30 derniers jours »
@@ -173,4 +190,4 @@ cp .env.example .env          (puis remplir avec ses identifiants francetravail.
   quelques pages de résultats, sans moisson exhaustive ni automatisation
   quotidienne. Ces sites l'interdisent dans leurs CGU : c'est un choix assumé
   par l'auteur du dépôt, à ses risques. Les chiffres issus de ces sources
-  restent partiels et ne se mélangent pas à ceux de France Travail.
+  restent partiels, et chaque offre garde sa source (champ `source`) sur le site.

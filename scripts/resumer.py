@@ -411,6 +411,17 @@ def commune_par_nom(geo, nom):
     return None, None
 
 
+# Les sources relevées à la main : fichier de data/externes/ -> (nom affiché, préfixe d'identifiant, adresse de l'offre).
+SOURCES_EXTERNES = {
+    "Adzuna": ("adz-", "https://www.adzuna.fr/details/{}"),
+    "Welcome to the Jungle": ("wttj-", "https://www.welcometothejungle.com/fr/companies/{}"),
+    "Indeed": ("ind-", "https://fr.indeed.com/viewjob?jk={}"),
+    "HelloWork": ("hw-", "https://www.hellowork.com/fr-fr/emplois/{}.html"),
+}
+FICHIERS_EXTERNES = {"adzuna.csv": "Adzuna", "wttj.csv": "Welcome to the Jungle",
+                     "indeed.csv": "Indeed", "hellowork.csv": "HelloWork"}
+
+
 def offre_externe(r, source, geo, jour, approx):
     """Une ligne d'un CSV de data/externes/ -> une offre au format de France Travail."""
     smin, smax = salaire_adzuna(r["salaire"])
@@ -423,10 +434,10 @@ def offre_externe(r, source, geo, jour, approx):
     contrat = (r["contrat"] or "").upper()
     famille = {"CDD": "cdd", "INTÉRIM": "mis", "INTERIM": "mis", "ALTERNANCE": "alt", "FREELANCE": "indep"}.get(contrat, "cdi")
     exact = bool(r.get("date"))
-    url = r["id"] if r["id"].startswith("http") else (
-        "https://www.welcometothejungle.com/fr/companies/" + r["id"] if source == "Welcome to the Jungle" else "https://www.adzuna.fr/details/" + r["id"])
+    prefixe, base = SOURCES_EXTERNES[source]
+    url = r["id"] if r["id"].startswith("http") else base.format(r["id"])
     return {
-        "id": ("wttj-" if source == "Welcome to the Jungle" else "adz-") + r["id"].split("/jobs/")[-1][:40],
+        "id": prefixe + r["id"].split("/jobs/")[-1][:40],
         "rome": r["rome"], "intitule": r["intitule"], "entreprise": r["entreprise"] or None,
         "lieu": r["lieu"], "dep": dep,
         "lat": pos[0] if pos else None, "lon": pos[1] if pos else None, "prec": "commune" if pos else None,
@@ -444,12 +455,12 @@ def offre_externe(r, source, geo, jour, approx):
 def lire_externes(geo, jour):
     """Les offres relevées à la main dans le navigateur (data/externes/*.csv), au même format que celles de France Travail.
 
-    Adzuna ne donne ni date précise (seulement « publiée il y a moins de 30 jours ») ni contrat sur la page de résultats :
-    la date est posée au milieu de la fenêtre (jour - 15) et un contrat non lu est supposé CDI ; les deux sont signalés
-    par `date_approx` et `contrat_suppose`. Welcome to the Jungle donne la date exacte, le contrat et le salaire."""
+    Adzuna et Indeed ne donnent pas la date précise sur la page de résultats (seulement « moins de 30 jours ») et Adzuna
+    pas le contrat : la date est posée au milieu de la fenêtre (jour - 15) et un contrat non lu est supposé CDI ; les deux
+    sont signalés par `date_approx` et `contrat_suppose`. Welcome to the Jungle et HelloWork donnent la date, le contrat et le salaire."""
     offres = []
     approx = (date.fromisoformat(jour) - timedelta(days=15)).isoformat()
-    for nom, source in (("adzuna.csv", "Adzuna"), ("wttj.csv", "Welcome to the Jungle")):
+    for nom, source in FICHIERS_EXTERNES.items():
         fichier = RACINE / "data" / "externes" / nom
         if fichier.exists():
             with fichier.open(encoding="utf-8") as f:
@@ -595,7 +606,8 @@ def main():
 
     resume = {
         "date": jour,
-        "source": "France Travail — API Offres d'emploi v2, complété par Adzuna et Welcome to the Jungle",
+        "source": "France Travail — API Offres d'emploi v2, complété par " + ", ".join(
+            sorted({o["source"] for o in offres if o["source"] != "France Travail"}, key=list(SOURCES_EXTERNES).index)),
         "requete": "une requête codeROME par métier, France entière",
         "metiers": [{"code": c, "libelle": l, "groupe": g, "coche": k,
                      "actives": sum(1 for o in offres if o["rome"] == c)}
