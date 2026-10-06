@@ -385,6 +385,8 @@ MOTIF_SALAIRE_ADZUNA = re.compile(
 def salaire_adzuna(lib):
     """'40 - 50 K€ BRUT ANNUEL' -> (40000, 50000) ; '2400.00€ - 2500.00€ MOIS' -> x12 ; 'A PARTIR DE 32 K€' -> (32000, None)."""
     t = (lib or "").lower().replace("\u202f", " ").replace("\xa0", " ")
+    if t.strip().startswith("<"):
+        return None, None                      # « < 25,7K » : on ne connaît que le plafond
     mois = "mois" in t
     nombres = re.findall(r"(\d[\d\s]*(?:[.,]\d+)?)\s*(k)?\s*€?", re.split(r"\bbrut\b|\bpar\b|\bmois\b", t)[0])
     vals = []
@@ -401,39 +403,57 @@ def salaire_adzuna(lib):
     return (vals[0], None) if "a partir" in t or "à partir" in t or len(vals) == 1 else (min(vals), max(vals))
 
 
-def lire_adzuna(geo, jour):
-    """Les offres Adzuna au même format que celles de France Travail.
+def commune_par_nom(geo, nom):
+    """Département et centre d'une commune retrouvée par son nom (la plus peuplée) ; (None, None) si inconnue."""
+    d = geo._get(f"{GEO}/communes?nom={requests.utils.quote(nom)}&fields=centre,codeDepartement&boost=population&limit=1")
+    if d and d[0].get("centre"):
+        return d[0].get("codeDepartement"), d[0]["centre"]["coordinates"][::-1]
+    return None, None
 
-    Adzuna ne donne ni date précise (seulement « publiée il y a moins de 30 jours ») ni contrat sur la page
-    de résultats : la date est posée au milieu de la fenêtre (jour - 15) et un contrat non lu est supposé CDI ;
-    les deux sont signalés par `date_approx` et `contrat_suppose`."""
-    fichier = RACINE / "data" / "externes" / "adzuna.csv"
-    if not fichier.exists():
-        return []
+
+def offre_externe(r, source, geo, jour, approx):
+    """Une ligne d'un CSV de data/externes/ -> une offre au format de France Travail."""
+    smin, smax = salaire_adzuna(r["salaire"])
+    m = re.search(r"\b(\d{2}[0-9AB]\d{2})\b", r["lieu"] or "")
+    insee = m.group(1) if m else None
+    pos, dep = (geo.commune(insee) if insee else None), (insee[:2] if insee else "")
+    if not pos and not insee and r["lieu"]:
+        dep, pos = commune_par_nom(geo, re.sub(r"\(.*", "", r["lieu"]).strip())
+        dep = dep or ""
+    contrat = (r["contrat"] or "").upper()
+    famille = {"CDD": "cdd", "INTÉRIM": "mis", "INTERIM": "mis", "ALTERNANCE": "alt", "FREELANCE": "indep"}.get(contrat, "cdi")
+    exact = bool(r.get("date"))
+    url = r["id"] if r["id"].startswith("http") else (
+        "https://www.welcometothejungle.com/fr/companies/" + r["id"] if source == "Welcome to the Jungle" else "https://www.adzuna.fr/details/" + r["id"])
+    return {
+        "id": ("wttj-" if source == "Welcome to the Jungle" else "adz-") + r["id"].split("/jobs/")[-1][:40],
+        "rome": r["rome"], "intitule": r["intitule"], "entreprise": r["entreprise"] or None,
+        "lieu": r["lieu"], "dep": dep,
+        "lat": pos[0] if pos else None, "lon": pos[1] if pos else None, "prec": "commune" if pos else None,
+        "contrat": contrat or None, "famille": famille, "source": source,
+        "date_approx": not exact, "contrat_suppose": not contrat,
+        "experience": None, "alternance": famille == "alt", "salaire": r["salaire"], "smin": smin, "smax": smax,
+        "date": r.get("date") or approx, "vu_le": r["recupere_le"], "url": url,
+        "outils": [nom for nom, rx in REGEX_OUTILS.items() if rx.search((r["intitule"] or "").lower())],
+        "teletravail": False, "competences": [], "niveau": niveau(r["intitule"]), "nature": "salarie",
+        "exp_exige": None, "exp_ans": None, "qualification": None, "formation": None, "secteur": None,
+        "temps": None, "postes": 1,
+    }
+
+
+def lire_externes(geo, jour):
+    """Les offres relevées à la main dans le navigateur (data/externes/*.csv), au même format que celles de France Travail.
+
+    Adzuna ne donne ni date précise (seulement « publiée il y a moins de 30 jours ») ni contrat sur la page de résultats :
+    la date est posée au milieu de la fenêtre (jour - 15) et un contrat non lu est supposé CDI ; les deux sont signalés
+    par `date_approx` et `contrat_suppose`. Welcome to the Jungle donne la date exacte, le contrat et le salaire."""
     offres = []
     approx = (date.fromisoformat(jour) - timedelta(days=15)).isoformat()
-    with fichier.open(encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            smin, smax = salaire_adzuna(r["salaire"])
-            m = re.search(r"\b(\d{2}[0-9AB]\d{2})\b", r["lieu"] or "")
-            insee = m.group(1) if m else None
-            pos = geo.commune(insee) if insee else None
-            dep = insee[:2] if insee else ""
-            contrat = (r["contrat"] or "").upper()
-            famille = {"CDD": "cdd", "INTÉRIM": "mis", "INTERIM": "mis", "ALTERNANCE": "alt"}.get(contrat, "cdi")
-            offres.append({
-                "id": "adz-" + r["id"], "rome": r["rome"], "intitule": r["intitule"], "entreprise": r["entreprise"] or None,
-                "lieu": r["lieu"], "dep": dep,
-                "lat": pos[0] if pos else None, "lon": pos[1] if pos else None, "prec": "commune" if pos else None,
-                "contrat": contrat or None, "famille": famille, "source": "Adzuna",
-                "date_approx": True, "contrat_suppose": not contrat,
-                "experience": None, "alternance": famille == "alt", "salaire": r["salaire"], "smin": smin, "smax": smax,
-                "date": approx, "vu_le": r["recupere_le"], "url": "https://www.adzuna.fr/details/" + r["id"],
-                "outils": [nom for nom, rx in REGEX_OUTILS.items() if rx.search((r["intitule"] or "").lower())],
-                "teletravail": False, "competences": [], "niveau": niveau(r["intitule"]), "nature": "salarie",
-                "exp_exige": None, "exp_ans": None, "qualification": None, "formation": None, "secteur": None,
-                "temps": None, "postes": 1,
-            })
+    for nom, source in (("adzuna.csv", "Adzuna"), ("wttj.csv", "Welcome to the Jungle")):
+        fichier = RACINE / "data" / "externes" / nom
+        if fichier.exists():
+            with fichier.open(encoding="utf-8") as f:
+                offres += [offre_externe(r, source, geo, jour, approx) for r in csv.DictReader(f)]
     return offres
 
 
@@ -502,7 +522,7 @@ def main():
             "temps": temps_travail(o),
             "postes": int(o.get("nombrePostes") or 1),
         })
-    offres += lire_adzuna(geo, jour)
+    offres += lire_externes(geo, jour)
     geo.sauver()
     offres, retires, trace = nettoyer(offres, jour)
 

@@ -26,6 +26,12 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 3. Quelles langues, quels outils (CRM, ERP, merchandising, KPI) reviennent le plus ?
 4. Quelles enseignes et quels secteurs recrutent : distribution, luxe, industrie, services ?
 
+## Offres de Welcome to the Jungle
+
+`data/externes/wttj.csv` : offres relevées dans le navigateur, page « jobs-matches » d'un compte connecté (rôle « responsable de magasin », France,
+CDI, débutant) : lien de l'offre, métier ROME rattaché, intitulé, employeur, ville, salaire affiché, contrat, date de publication exacte.
+Seules les offres qui affichent un salaire et ressemblent aux métiers suivis sont gardées (une dizaine de pages de résultats parcourues).
+
 ## Offres d'Adzuna
 
 `data/externes/adzuna.csv` contient les offres Adzuna relevées dans le navigateur (recherche par métier, filtre « 30 derniers jours »
