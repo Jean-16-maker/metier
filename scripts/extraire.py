@@ -24,7 +24,7 @@ import os
 import re
 import sys
 import time
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -50,6 +50,11 @@ METIERS = {
 
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"
 SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
+
+# On ne collecte que les annonces créées il y a moins de FENETRE_JOURS jours (le site n'en garde pas de plus vieilles).
+# L'API plafonne à 1 150 offres par requête : si une fenêtre en contient davantage, on la coupe en deux, et ainsi de suite.
+FENETRE_JOURS = 62
+PLAFOND = 1150
 
 # Champs qui bougent sans que l'offre change : ignorés pour décider si une offre a été modifiée.
 CHAMPS_VOLATILS = {"dateActualisation"}
@@ -108,6 +113,40 @@ def chercher(token, params, pas=150, maximum=1150):
     return offres, total
 
 
+def _iso(t):
+    return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def total_fenetre(token, params):
+    """Nombre d'offres d'une recherche, lu dans Content-Range d'une requête d'une seule offre."""
+    r = requests.get(SEARCH_URL, params=dict(params, range="0-0"),
+                     headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    if r.status_code == 204:
+        return 0
+    if r.status_code not in (200, 206):
+        raise RuntimeError(f"{r.status_code} : {r.text[:200]}")
+    m = re.search(r"/(\d+)", r.headers.get("Content-Range", ""))
+    return int(m.group(1)) if m else len(r.json().get("resultats", []))
+
+
+def chercher_tout(token, params, debut=None, fin=None, profondeur=0):
+    """Toutes les offres créées entre `debut` et `fin`, au-delà du plafond de l'API : une fenêtre qui dépasse
+    PLAFOND offres est coupée en deux. Renvoie (liste d'offres sans doublon, nombre de requêtes de découpage)."""
+    maintenant = datetime.now(timezone.utc).replace(microsecond=0)
+    fin = fin or maintenant
+    debut = debut or fin - timedelta(days=FENETRE_JOURS)
+    fenetre = dict(params, minCreationDate=_iso(debut), maxCreationDate=_iso(fin))
+    total = total_fenetre(token, fenetre)
+    if total <= PLAFOND or (fin - debut) <= timedelta(hours=6) or profondeur >= 8:
+        offres, _ = chercher(token, fenetre)
+        return offres, 1, total
+    milieu = debut + (fin - debut) / 2
+    a, na, ta = chercher_tout(token, params, debut, milieu.replace(microsecond=0), profondeur + 1)
+    b, nb, tb = chercher_tout(token, params, milieu.replace(microsecond=0) + timedelta(seconds=1), fin, profondeur + 1)
+    uniques = {o["id"]: o for o in a + b}
+    return list(uniques.values()), na + nb + 1, ta + tb
+
+
 def empreinte(offre):
     """Empreinte du contenu d'une offre, champs volatils exclus : change si l'annonce change."""
     stable = {k: v for k, v in offre.items() if k not in CHAMPS_VOLATILS}
@@ -149,7 +188,7 @@ def main():
 
     actives, lignes_serie = [], []
     for code in codes:
-        offres, total = chercher(token, {"codeROME": code})
+        offres, requetes, total = chercher_tout(token, {"codeROME": code})
         nouvelles = modifiees = 0
         with (RACINE / "data" / "brut" / mois / f"{code}.jsonl").open("a", encoding="utf-8") as brut:
             for o in offres:
@@ -166,7 +205,7 @@ def main():
                 actives.append((code, o["id"], (o.get("dateActualisation") or "")[:10]))
         lignes_serie.append([aujourdhui, code, total if total is not None else len(offres),
                              len(offres), nouvelles, modifiees])
-        print(f"{code}  {METIERS[code][0]:<48} {len(offres):5d} offres, {nouvelles:4d} nouvelles, {modifiees:3d} modifiées")
+        print(f"{code}  {METIERS[code][0]:<48} {len(offres):5d} offres ({requetes} fenêtre{'s' if requetes > 1 else ''}), {nouvelles:4d} nouvelles, {modifiees:3d} modifiées")
         time.sleep(0.5)
 
     # Même logique pour les actives du jour : on remplace les codes relancés, on garde les autres.

@@ -88,7 +88,8 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
                        .github/workflows/veille.yml : GitHub relance tout ça chaque lundi à 8 h (heure de Paris)
 ```
 
-- `scripts/extraire.py` — une requête `codeROME` par métier (token OAuth,
+- `scripts/extraire.py` — une recherche `codeROME` par métier, limitée aux annonces créées il y a moins de 62 jours. L'API plafonne à 1 150 offres par requête : quand une
+  fenêtre de dates en contient davantage, elle est coupée en deux (`chercher_tout`) jusqu'à tout récupérer. Une requête `codeROME` (token OAuth,
   pagination 150 / 1 150, total lu dans `Content-Range`). Le **brut est
   conservé intégralement** : une offre est écrite la première fois qu'on la
   voit, et de nouveau si son contenu change (empreinte SHA-1 du JSON, hors
