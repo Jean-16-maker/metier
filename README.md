@@ -18,6 +18,7 @@ marketing, IAE Clermont Auvergne) : même chaîne API → données → Action pl
 | `exigences.html` | expérience, diplôme, outils, langues, compétences |
 | `recruteurs.html` | entreprises, secteurs, employeurs ouverts aux débutants |
 | `mouvement.html` | les extractions successives, la fraîcheur des annonces |
+| `desordre.html` | le désordre de la base brute : ce qui manque, le format du salaire, les doublons, les positions (TD 1) |
 
 ## Les questions que je pose à ce marché
 

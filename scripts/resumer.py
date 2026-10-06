@@ -457,6 +457,65 @@ def lire_externes(geo, jour):
     return offres
 
 
+# ---------------------------------------------------------------------------
+# Le désordre de la base brute (TD 1) : ce qui manque, ce qui n'est pas au bon format, ce qui est en double...
+# Calculé sur toutes les offres collectées, avant le nettoyage, pour que la page « Qualité des données » le montre.
+# ---------------------------------------------------------------------------
+def unite_salaire(lib):
+    """'aucun' | 'annuel' | 'mensuel' | 'horaire' | 'texte' (un libellé sans montant exploitable)."""
+    t = (lib or "").strip().lower()
+    if not t:
+        return "aucun"
+    if re.search(r"horaire|heure|hour", t):
+        return "horaire"
+    if re.search(r"mensuel|mois", t):
+        return "mensuel"
+    if re.search(r"annuel|par an|k€|\ban\b", t):
+        return "annuel"
+    return "texte"
+
+
+def diagnostic(offres, jour):
+    """Décompte du désordre sur la base brute (liste d'offres avant `nettoyer`)."""
+    limite = date.fromisoformat(jour) - timedelta(days=AGE_MAX_JOURS)
+    unites = defaultdict(int)
+    hors = []
+    for o in offres:
+        u = unite_salaire(o["salaire"])
+        unites[u] += 1
+        if u in ("annuel", "mensuel", "horaire") and o["smin"] is None and o["salaire"]:
+            hors.append([o["intitule"], o["entreprise"] or "", o["salaire"], o["url"] or ""])
+    groupes = defaultdict(list)
+    for o in offres:
+        groupes[cle_doublon(o)].append(o)
+    doubles = sorted((g for g in groupes.values() if len(g) > 1), key=len, reverse=True)
+    def vieille(o):
+        try:
+            return date.fromisoformat(o["date"]) < limite
+        except (TypeError, ValueError):
+            return False
+    return {
+        "total": len(offres),
+        "sans_salaire": sum(1 for o in offres if o["smin"] is None and not o["salaire"]),
+        "sans_entreprise": sum(1 for o in offres if not o["entreprise"]),
+        "unites": dict(unites),
+        "hors_fenetre": len(hors),
+        "hors_fenetre_exemples": hors[:10],
+        "doublons": {
+            "offres_concernees": sum(len(g) for g in doubles),
+            "exemplaires_en_trop": sum(len(g) - 1 for g in doubles),
+            "groupes": [[f"{g[0]['entreprise'] or 'employeur non précisé'} — {g[0]['intitule']} ({g[0]['lieu'] or g[0]['dep'] or '?'})", len(g)] for g in doubles[:12]],
+        },
+        "anciennes": sum(1 for o in offres if vieille(o)),
+        "non_salaries": {
+            "franchise": sum(1 for o in offres if o["contrat"] == "FRA"),
+            "liberale": sum(1 for o in offres if o["contrat"] == "LIB"),
+            "commerciale": sum(1 for o in offres if o["contrat"] == "CCE"),
+        },
+        "postes": sum(o["postes"] for o in offres),
+    }
+
+
 def main():
     jours = sorted((RACINE / "data" / "actives").glob("*.csv"))
     if not jours:
@@ -524,6 +583,7 @@ def main():
         })
     offres += lire_externes(geo, jour)
     geo.sauver()
+    desordre = diagnostic(offres, jour)
     offres, retires, trace = nettoyer(offres, jour)
 
     # Série : par jour et par métier
@@ -544,6 +604,7 @@ def main():
         "contrats": {"cdi": "CDI", "cdd": "CDD", "mis": "Intérim", "alt": "Alternance", "indep": "Freelance"},
         "retires": retires,
         "trace": trace,
+        "desordre": desordre,
         "niveaux": NIVEAUX_LIBELLES,
         "formations": FORMATIONS,
         "versions_conservees": nb_versions,

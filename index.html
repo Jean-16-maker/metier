@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=6">
+<link rel="stylesheet" href="assets/commun.css?v=7">
 </head>
 <body>
 <main>
@@ -43,7 +43,7 @@
   <div class="grille" style="margin-top:16px">
     <div class="carte"><h3>Répartition par métier <small>— part des offres sélectionnées</small></h3><div class="zone ronde"><canvas id="g-metiers"></canvas></div><p class="lecture" id="l-metiers"></p></div>
     <div class="carte"><h3>Répartition par niveau de poste <small>— de junior à directeur</small></h3><div class="zone ronde"><canvas id="g-niveaux"></canvas></div><p class="lecture" id="l-niveaux"></p></div>
-    <div class="carte"><h3>Répartition par type de contrat</h3><div class="zone ronde"><canvas id="g-contrats"></canvas></div><p class="lecture" id="l-contrats"></p></div>
+    <div class="carte"><h3>Répartition par type de contrat</h3><div class="zone ronde"><canvas id="g-contrats"></canvas></div><p class="lecture" id="l-contrats"></p><div id="t-contrats"></div></div>
     <div class="carte"><h3>Où sont les offres ? <small>— les 10 départements qui en ont le plus</small></h3><div class="zone"><canvas id="g-departements"></canvas></div><p class="lecture" id="l-departements"></p></div>
   </div>
 
@@ -54,12 +54,13 @@
     <a class="lien" href="exigences.html"><b>Ce qu'on vous demande</b><span><i id="cle-exigences">—</i> — expérience, formation, outils et compétences cités dans les annonces.</span></a>
     <a class="lien" href="recruteurs.html"><b>Qui recrute</b><span><i id="cle-recruteurs">—</i> — entreprises, secteurs, niveau de poste par métier, et les dernières offres.</span></a>
     <a class="lien" href="mouvement.html"><b>Le marché bouge</b><span><i id="cle-mouvement">—</i> — les extractions successives, la fraîcheur des annonces, et les limites de ces chiffres.</span></a>
+    <a class="lien" href="desordre.html"><b>Qualité des données</b><span><i id="cle-desordre">—</i> — ce qui manque, le salaire en texte et en trois unités, les doublons, les positions approximatives.</span></a>
   </div>
 
   <footer id="pied"></footer>
 </main>
 
-<script src="assets/commun.js?v=6"></script>
+<script src="assets/commun.js?v=7"></script>
 <script>
 /* ============ Accueil : chiffres, carte, départements, contrats ============ */
 let carte, calque;
@@ -130,6 +131,7 @@ function rendre(offres, D) {
   // Une phrase de lecture sous chaque graphique : ce qu'on voit, sur combien d'offres.
   if (parMetier.length) lecture("l-metiers", `${(lib[parMetier[0][0]] || {}).libelle || parMetier[0][0]} est le métier le plus représenté : ${parMetier[0][1]} offres sur ${n} (${pct(parMetier[0][1], n)} %).`);
   if (niveauxPresents.length) { const top = [...niveauxPresents].sort((a, b) => b[2] - a[2])[0]; lecture("l-niveaux", `Niveau le plus fréquent : ${top[1]}, ${top[2]} offres sur ${n} (${pct(top[2], n)} %) ; niveau déduit de l'intitulé.`); }
+  tableauFrequences("t-contrats", contrats.map(x => [x[1], x[2]]).sort((a, b) => b[1] - a[1]), n);
   if (contrats.length) { const top = [...contrats].sort((a, b) => b[2] - a[2])[0]; lecture("l-contrats", `${top[1]} : ${top[2]} offres sur ${n} (${pct(top[2], n)} %). Un contrat non précisé par Adzuna est supposé CDI.`); }
   if (deps.length) lecture("l-departements", `Le département ${deps[0][0]} compte le plus d'offres : ${deps[0][1]} sur ${n} (${pct(deps[0][1], n)} %) ; les offres sans département ne sont pas comptées.`);
 
@@ -143,6 +145,8 @@ function rendre(offres, D) {
   document.getElementById("cle-salaires").textContent = `${avecSal.length} offre${s(avecSal.length)} affiche${nt(avecSal.length)} un salaire`;
   document.getElementById("cle-exigences").textContent = `${debutants} offre${s(debutants)} accepte${nt(debutants)} un débutant`;
   document.getElementById("cle-recruteurs").textContent = `${employeurs} employeur${s(employeurs)} différent${s(employeurs)}`;
+  const X = D.desordre;
+  if (X) document.getElementById("cle-desordre").textContent = `${pct(X.sans_salaire, X.total)} % des offres collectées sans salaire`;
   document.getElementById("cle-mouvement").textContent = `${fraiches} offre${s(fraiches)} de moins de 7 jours, ${extractions} extraction${s(extractions)}`;
 }
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le désordre des données — retail, expérience client et direction commerciale internationale</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="assets/commun.css?v=7">
+</head>
+<body>
+<main>
+  <div id="nav-ici"></div>
+  <h1>Le désordre des données <small>— ce qui manque ou trompe dans la base</small></h1>
+  <p class="sous" id="sous">Chargement des données…</p>
+
+  <div id="filtres-ici"></div>
+
+  <p class="note" style="margin-top:16px">Cette page décrit la <b>base brute</b>, avant tout nettoyage, quels que soient les filtres : seul le dernier graphique suit vos filtres. Décrire le désordre est déjà un résultat : un chiffre sans cette trace ne tient pas au moment où on vous le demande.</p>
+
+  <div class="grille" style="margin-top:16px">
+    <div class="carte"><h3>1. Ce qui manque : le salaire <small>— offres de la base brute</small></h3><div class="zone ronde"><canvas id="g-manque-salaire"></canvas></div><p class="lecture" id="l-manque-salaire"></p></div>
+    <div class="carte"><h3>1. Ce qui manque : l'employeur <small>— offres de la base brute</small></h3><div class="zone ronde"><canvas id="g-manque-entreprise"></canvas></div><p class="lecture" id="l-manque-entreprise"></p></div>
+
+    <div class="carte large"><h3>2. Ce qui n'est pas au bon format : le salaire arrive en texte, en trois unités <small>— nombre d'offres par unité</small></h3><div class="zone"><canvas id="g-unites"></canvas></div><p class="lecture" id="l-unites"></p>
+      <div id="t-hors-fenetre"></div></div>
+
+    <div class="carte large"><h3>3. Ce qui est en double <small>— les 12 annonces les plus répétées (même employeur, même intitulé, même lieu)</small></h3><div class="zone haute"><canvas id="g-doublons"></canvas></div><p class="lecture" id="l-doublons"></p></div>
+
+    <div class="carte large"><h3>4. Ce qui n'est pas ce qu'on croit <small>— des offres actives qui ne sont pas des emplois salariés récents</small></h3><div class="zone"><canvas id="g-pas-ce-quon-croit"></canvas></div><p class="lecture" id="l-pas-ce-quon-croit"></p></div>
+
+    <div class="carte"><h3>5. Ce qui n'est pas là du tout : la position <small>— offres de votre sélection</small></h3><div class="zone ronde"><canvas id="g-positions"></canvas></div><p class="lecture" id="l-positions"></p></div>
+    <div class="carte"><h3>6. Pourquoi des offres ont été retirées <small>— décrire le désordre est déjà un résultat</small></h3><div class="zone ronde"><canvas id="g-trace"></canvas></div><p class="lecture" id="l-trace"></p></div>
+  </div>
+
+  <footer id="pied"></footer>
+</main>
+
+<script src="assets/commun.js?v=7"></script>
+<script>
+/* ============ Le désordre des données (TD 1 : « le désordre de vos données ») ============ */
+const UNITES = [["annuel", "Annuel"], ["mensuel", "Mensuel"], ["horaire", "Horaire"], ["texte", "Texte sans montant"], ["aucun", "Aucun salaire"]];
+
+function rendre(offres, D) {
+  const X = D.desordre;
+  if (!X) { document.getElementById("sous").textContent = "Ce résumé ne contient pas encore le diagnostic du désordre : relancez la veille."; return; }
+  const n = X.total;
+
+  /* 1. Ce qui manque : deux parts par anneau, le cas où un camembert se lit */
+  const avecSal = n - X.sans_salaire, avecEnt = n - X.sans_entreprise;
+  camembert("g-manque-salaire", ["Salaire affiché", "Aucun salaire"], [avecSal, X.sans_salaire], ["#2a6ad4", "#b4b4bc"]);
+  lecture("l-manque-salaire", `Sur ${n} offres collectées, ${X.sans_salaire} (${pct(X.sans_salaire, n)} %) n'affichent aucun salaire. Un salaire moyen calculé sur les ${avecSal} qui l'affichent décrit ces offres-là, pas le marché.`);
+  camembert("g-manque-entreprise", ["Employeur nommé", "Employeur absent"], [avecEnt, X.sans_entreprise], ["#2a6ad4", "#b4b4bc"]);
+  lecture("l-manque-entreprise", `${X.sans_entreprise} offres sur ${n} (${pct(X.sans_entreprise, n)} %) ne nomment pas l'entreprise : elles sont écartées de « Qui recrute ».`);
+
+  /* 2. Le format : le salaire arrive en texte et dans plusieurs unités */
+  const vals = UNITES.map(([k]) => X.unites[k] || 0);
+  colonnes("g-unites", UNITES.map(x => x[1]), vals, UNITES.map(([k]) => k === "aucun" ? "#b4b4bc" : k === "texte" ? "#f5b301" : couleur));
+  lecture("l-unites", `Parmi les ${n - X.sans_salaire} offres qui affichent un salaire : ${X.unites.annuel || 0} en annuel, ${X.unites.mensuel || 0} en mensuel, ${X.unites.horaire || 0} en horaire et ${X.unites.texte || 0} en texte sans montant. Il faut tout ramener à une seule unité (brut annuel) avant toute moyenne. ${X.hors_fenetre} saisies sont hors de la fenêtre de vraisemblance (4 000 à 250 000 € bruts par an) et sont écartées : « Mensuel de 24 000 euros » est un salaire annuel tapé dans la case mensuelle. Même l'expérience mélange « Débutant accepté », « 1 an » et « Expérience exigée » : une variable ordinale à recoder avant de la résumer.`);
+  document.getElementById("t-hors-fenetre").innerHTML = X.hors_fenetre_exemples.length
+    ? `<table class="freq"><thead><tr><th>Saisies à vérifier (exemples)</th><th>Employeur</th><th>Salaire tel qu'écrit</th></tr></thead><tbody>${X.hors_fenetre_exemples.map(e =>
+        `<tr><td>${e[3] ? `<a href="${e[3]}" target="_blank" rel="noopener">${e[0]}</a>` : e[0]}</td><td>${e[1] || "—"}</td><td>${e[2]}</td></tr>`).join("")}</tbody></table>` : "";
+
+  /* 3. Les doublons : compter des offres, ce n'est pas compter des postes */
+  const g = X.doublons.groupes;
+  zoneSelonBarres("g-doublons", g.length, 36);
+  barres("g-doublons", g.map(x => enLignes(x[0], 60)), g.map(x => x[1]), true, " annonces");
+  lecture("l-doublons", `${X.doublons.offres_concernees} annonces sur ${n} partagent leur employeur, leur intitulé et leur lieu avec une autre : ${X.doublons.exemplaires_en_trop} exemplaires en trop. Compter des offres, ce n'est pas compter des postes : ce site compte des annonces uniques (une seule par groupe, la plus récente), alors que les annonces déclarent ensemble ${X.postes} postes à pourvoir. Ce choix est écrit ici, et le même chiffre est utilisé partout.`);
+
+  /* 4. Ce qui n'est pas ce qu'on croit */
+  const NC = [["Publiées il y a plus de 2 mois", X.anciennes], ["Franchises", X.non_salaries.franchise], ["Professions libérales", X.non_salaries.liberale], ["Professions commerciales", X.non_salaries.commerciale]];
+  barres("g-pas-ce-quon-croit", NC.map(x => x[0]), NC.map(x => x[1]), true, " offres");
+  lecture("l-pas-ce-quon-croit", `Sur ${n} offres actives, ${X.anciennes} datent de plus de 2 mois (écartées), et ${X.non_salaries.franchise + X.non_salaries.liberale + X.non_salaries.commerciale} ne sont pas des emplois salariés : ${X.non_salaries.franchise} franchises, ${X.non_salaries.liberale} professions libérales, ${X.non_salaries.commerciale} professions commerciales. Une offre active n'est pas forcément récente, ni un emploi.`);
+
+  /* 5. Ce qui n'est pas là du tout : la précision de la position, sur la sélection */
+  const P = [["À l'adresse de l'offre", offres.filter(o => o.prec === "offre").length], ["Au centre de la commune", offres.filter(o => o.prec === "commune").length],
+             ["Au centre du département", offres.filter(o => o.prec === "departement").length], ["Aucune position", offres.filter(o => o.lat == null).length]];
+  camembert("g-positions", P.map(x => x[0]), P.map(x => x[1]), ["#2a6ad4", "#5f9bf5", "#a7c9ff", "#b4b4bc"]);
+  lecture("l-positions", `Sur ${offres.length} offres sélectionnées : ${P[0][1]} sont placées à leur adresse, ${P[1][1]} au centre de leur commune, ${P[2][1]} au centre de leur département et ${P[3][1]} n'ont aucune position. Sur une carte, elles s'empilent au même point ou disparaissent. Et la base ne voit que ses sources : France Travail, Adzuna et Welcome to the Jungle.`);
+
+  /* 6. La trace : décrire le désordre est un résultat */
+  const trace = D.trace || [];
+  const R = Object.entries(D.retires || {}).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  if (trace.length && R.length) {
+    camembert("g-trace", R.map(x => x[0].charAt(0).toUpperCase() + x[0].slice(1)), R.map(x => x[1]), null, 7);
+    lecture("l-trace", `On part de ${trace[0][1]} offres et on en garde ${trace[trace.length - 1][1]} (${pct(trace[trace.length - 1][1], trace[0][1])} %) : une analyse de salaire porte sur ces ${trace[trace.length - 1][1]} offres, pas sur ${trace[0][1]}. Le camembert montre les ${R.reduce((s, x) => s + x[1], 0)} offres retirées, par raison. Avant le premier graphique : combien de lignes au départ, ce qu'on a retiré ou recodé, et pourquoi.`);
+  }
+}
+
+Commun.demarrer(rendre);
+</script>
+</body>
+</html>
