@@ -595,7 +595,7 @@ def main():
 
     resume = {
         "date": jour,
-        "source": "France Travail — API Offres d'emploi v2, complété par Adzuna",
+        "source": "France Travail — API Offres d'emploi v2, complété par Adzuna et Welcome to the Jungle",
         "requete": "une requête codeROME par métier, France entière",
         "metiers": [{"code": c, "libelle": l, "groupe": g, "coche": k,
                      "actives": sum(1 for o in offres if o["rome"] == c)}
