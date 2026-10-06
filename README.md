@@ -40,6 +40,10 @@ et salaire minimum, une page ou deux par recherche) : identifiant, métier ROME 
 `resumer.py` les fusionne avec celles de France Travail et applique les mêmes règles. Adzuna n'affiche ni la date exacte ni le contrat sur la liste :
 la date est posée au milieu de la fenêtre (`date_approx`) et un contrat non lu est supposé CDI (`contrat_suppose`).
 Pour en ajouter, complétez le CSV puis relancez `scripts/resumer.py`.
+Relevé du 6 octobre 2026 pour le groupe retail : directeur et responsable de magasin (D1301), directeur régional,
+area manager et multi-sites (D1509), customer success manager et responsable relation ou service client (M1704),
+key account manager, account manager et responsable grands comptes (D1402), quatre pages par recherche. Le salaire
+y est réécrit au format « 30000 - 40000 € BRUT ANNUEL » et la ville est gardée sans code postal (position retrouvée par son nom).
 
 ## Ce qui est gardé dans les chiffres
 
@@ -64,11 +68,12 @@ colonnes dans l'ordre naturel (expérience, diplôme, salaire, âge), courbe pou
 - **Retail & expérience client** — D1301 management de magasin de détail, D1302
   direction de boutique ou de point de vente, D1509 management du réseau
   commercial de détail (directeur de réseau, area manager, chef de secteur),
-  M1704 management relation clientèle (expérience client, CRM, service client).
+  M1704 management relation clientèle (expérience client, CRM, service client,
+  customer success manager), D1402 relation commerciale grands comptes et
+  entreprises (key account manager, ingénieur d'affaires).
 - **Direction commerciale & international** — M1707 stratégie commerciale
-  (directeur commercial, export ou international, business developer), D1402
-  relation commerciale grands comptes et entreprises (ingénieur d'affaires
-  international, key account manager), H1102 management et ingénierie d'affaires.
+  (directeur commercial, export ou international, business developer), H1102
+  management et ingénierie d'affaires.
 
 Les libellés officiels des codes sont à vérifier avec `scripts/extraire.py --verifier`
 puis `--rome <code>` : un code qui ne renvoie aucune offre est probablement mal recopié.

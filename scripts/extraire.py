@@ -41,10 +41,10 @@ METIERS = {
     "D1301": ("Management de magasin de détail", "Retail & expérience client", True),
     "D1302": ("Direction de boutique ou de point de vente", "Retail & expérience client", True),
     "D1509": ("Management du réseau commercial de détail", "Retail & expérience client", True),
-    "M1704": ("Management relation clientèle", "Retail & expérience client", True),
+    "M1704": ("Management relation clientèle (customer success)", "Retail & expérience client", True),
+    "D1402": ("Relation commerciale grands comptes et entreprises", "Retail & expérience client", True),
     # Direction commerciale et international business
     "M1707": ("Stratégie commerciale", "Direction commerciale & international", True),
-    "D1402": ("Relation commerciale grands comptes et entreprises", "Direction commerciale & international", True),
     "H1102": ("Management et ingénierie d'affaires", "Direction commerciale & international", True),
 }
 
